@@ -266,6 +266,8 @@ Linux上存在五种I/O模型：阻塞I/O，非阻塞I/O，I/O复用，信号驱
 然后返回到用户态，用户线程得以继续执行。在此场景用户线程在执行流进入内核态到返回到用户态之间的这段时间内，
 一直处于阻塞状态，因此阻塞I/O属于同步I/O模型。\par
 
+典型例子：Linux上的read(2)，write(2)系统调用和配置为阻塞的套接字。\par
+
 \cfig{block-io}{0.5}{阻塞I/O模型}
 
 \subsubsection{非阻塞I/O模型}
@@ -278,6 +280,8 @@ Linux上存在五种I/O模型：阻塞I/O，非阻塞I/O，I/O复用，信号驱
 在此场景，用户线程需要不断轮询内核，直到内核执行上面第二种操作，本质上用户线程在轮询的过程中也是处于
 阻塞状态，因此非阻塞I/O也属于同步I/O模型。\par
 
+典型例子：Linux上配置为NONBLOCK的套接字。\par
+
 \cfig{nonblock-io}{0.5}{非阻塞I/O模型}
 
 \subsubsection{I/O复用模型}
@@ -288,6 +292,8 @@ Linux上存在五种I/O模型：阻塞I/O，非阻塞I/O，I/O复用，信号驱
 
 I/O复用的好处在于可以通过一个用户线程的阻塞换取多个用户线程的非阻塞，获得整体上的性能提升。Linux 上的
 select, poll, epoll等机制就是典型的I/O复用模型\par
+
+典型例子：Linux上的select，poll，epoll机制。\par
 
 \cfig{io-multiplex}{0.7}{I/O复用模型}
 
@@ -302,6 +308,8 @@ select, poll, epoll等机制就是典型的I/O复用模型\par
 信号驱动I/O的好处在于用户线程第二次进入内核态时，套接字上已经有数据报到达了，内核线程这时候只需要做
 数据拷贝动作而不需要等待，节省了等待数据的时间。\par
 
+典型例子：Linux上的sigaction系统调用。\par
+
 \cfig{signal-driven}{0.7}{信号驱动I/O模型}
 
 \subsubsection{异步I/O模型}
@@ -312,6 +320,8 @@ select, poll, epoll等机制就是典型的I/O复用模型\par
 当内核等待数据就绪并完成数据拷贝后，会通过某种方式通知用户。用户线程收到通知后，便可从容地处理数据。\par
 
 异步I/O的好处是对于用户线程来说，整个I/O操作过程不存在任何阻塞现象，CPU资源得到充分的利用。\par
+
+典型例子：Linux上的io\underline{~}uring特性。\par
 
 \cfig{async-io}{0.7}{异步I/O模型}
 
