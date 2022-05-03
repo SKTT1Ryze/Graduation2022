@@ -1,0 +1,11 @@
+\begin{tikzpicture}
+  \draw [->] (0,4)--(0,0);
+  \draw [->] (0,0)--(8,0);
+  \draw [->] (8,0)--(8,4);
+  \draw [dash dot dot] (-2,2)--(10,2);
+  \node at (4,4) {用户};
+  \node at (4,-1) {内核};
+  \node at (-1,2.5) {发起请求};
+  \node at (8,1.5) {返回};
+  \node at (4,0.5) {等待数据};
+\end{tikzpicture}

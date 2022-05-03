@@ -111,7 +111,7 @@
 In the era of big data, with the rapid growth of the number of Internet users, data centers
 are faced with increasingly large and frequent data access, and the demand for more efficient
 data input and output technical solutions is also increasing. In this context, the synchronous
-data IO mode used in traditional server development is gradually unable to perform performance
+data I/O mode used in traditional server development is gradually unable to perform performance
 tests due to thread blocking problems.Therefore, the industry and academia are exploring and
 researching more efficient asynchronous I/O solutions, hoping to improve the overall performance
 of the system.\par
@@ -243,45 +243,56 @@ Goroutine功不可没。然而，Goroutine由于语言本身的垃圾回收机�
 系统编程领域能否带来，能带来多少性能提升。\par
 
 \subsection{论文结构}
-xxx
+TODO
 
 \section{背景技术概述}
+\subsection{同步I/O与异步I/O}
+Linux平台上的I/O操作从场景视角看大致可以分为两种：网络I/O和文件I/O，下文的讨论对其不予区分。\par
 
-\subsection{算法}
+一个I/O操作可以从发起者和处理者角度分成两个过程:
+\begin{enumerate}
+    \item 发起者发起I/O请求；
+    \item 处理者处理I/O请求。
+\end{enumerate}\par
+而同步I/O和异步I/O的区分标准是：在整个I/O操作过程中，是否存在发起者和处理者中某一方或双方
+因需要同步步调而导致的阻塞现象。如果存在，则为同步I/O，反之为异步I/O。
+在Linux的语境下，发起者通常指用户线程，处理者通常指操作系统内核。\par
 
-这是一个算法。这是一个算法。这是一个算法。这是一个算法。这是一个算法。这是一个
-算法。这是一个算法。这是一个算法。这是一个算法。这是一个算法。这是一个算法。这
-是一个算法。这是一个算法。这是一个算法。这是一个算法。
+Linux上存在五种I/O模型：阻塞I/O，非阻塞I/O，I/O复用，信号驱动I/O，异步I/O。
+其中前四种属于同步I/O模型，第五种属于异步I/O模型。下面将会对这五种I/O模型进行详细分析。\par
 
-\begin{shaded*}\begin{alg}{一个复杂算法}
-  \label{alg:apb}
-  \begin{algorithmic}
-    \Input Two numbers $a$ and $b$
-    \Output The sum of $a$ and $b$
-    \Procedure{A-Plus-B}{$a, b$}
-      \If $a = 0$
-        \State \Return $b$
-      \EndIf
-      \State $res \gets 0$
-      \While{$b \neq 0$}
-        \State Increase $res$ by $1$
-        \State $b \gets b - 1$
-      \EndWhile
-      \State \Return $res$
-    \EndProcedure
-  \end{algorithmic}
-\end{alg}\end{shaded*}
+\subsubsection{阻塞I/O模型}
+用户线程发起I/O请求后，进入内核态，内核线程请求硬件设备，等待数据准备好后，内核线程将数据拷贝到用户态空间，
+然后返回到用户态，用户线程得以继续执行。用户线程在执行流进入内核态到返回用户态这段时间内，一直处于阻塞状态，
+因此阻塞I/O属于同步I/O模型。\par
 
-\begin{thm} \label{thm:gsb-apprx}
-  \ralg{apb}所示的算法是正确的。
-\end{thm}
-\begin{proof}[证明]
-  显然，此处略去。
-\end{proof}
+\cfig{block-io}{0.5}{阻塞I/O模型}
 
-我是字。我是字。我是字。我是字。我是字。我是字。我是字。我是字。我是字。我是字
-。我是字。我是字。我是字。我是字。我是字。我是字。我是字。我是字。我是字。我是
-字。我是字。我是字。我是字。我是字。我是字。我是字。我是字。我是字。
+\subsubsection{非阻塞I/O模型}
+\subsubsection{I/O复用模型}
+\subsubsection{信号驱动I/O模型}
+\subsubsection{异步I/O模型}
+
+\subsection{Linux io\underline{~}uring}
+\subsection{有栈协程与无栈协程}
+\subsection{Rust语言中的协程}
+\subsection{C++语言中的协程}
+\subsection{本章小结}
+\section{系统设计}
+\subsection{功能需求}
+\subsection{系统总体设计}
+\subsection{功能模块设计}
+\subsection{本章小结}
+\section{系统实现}
+\subsection{xxx模块实现}
+\subsection{xxx模块实现}
+\subsection{本章小结}
+\section{性能测试与分析}
+\subsection{测试环境}
+\subsection{功能测试}
+\subsection{性能测试}
+\subsection{本章小结}
+\section{总结与展望}
 
 \subsection{一张表}
 
@@ -327,13 +338,7 @@ xxx
 
 \begin{thankpage}
 
-感谢CCF给我这次机会。感谢CCTV给我这次机会。感谢HUST给我这次机会。感谢大萝卜给
-我这次机会。感谢CCF给我这次机会。感谢CCTV给我这次机会。感谢HUST给我这次机会。
-感谢大萝卜给我这次机会。
-
-感谢CCF给我这次机会。感谢CCTV给我这次机会。感谢HUST给我这次机会。感谢大萝卜给
-我这次机会。感谢CCF给我这次机会。感谢CCTV给我这次机会。感谢HUST给我这次机会。
-感谢大萝卜给我这次机会。
+致谢
 
 \end{thankpage}
 
