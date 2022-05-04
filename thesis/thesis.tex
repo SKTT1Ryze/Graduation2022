@@ -373,12 +373,13 @@ Linux社区开发者们最初的想法是尝试改进AIO接口，并且持续了
 原因是：
 
 \begin{enumerate}
-  \item AIO接口存在三个系统调用，对多个系统调用的修改需要添加新的系统调用来传递信息，最终导致
+  \item AIO接口存在三个系统调用，对多个系统调用的修改需要添加新的系统调用来传递信息，最终会导致
     代码复杂性增高和可维护性变低，而且这仅仅解决了AIO接口的其中一个较为突出的问题。
   \item 修改AIO接口会引入新的问题（bug），或者会使得现有问题变得更加严重，比如会使得现有API变得复杂，难以使用。
 \end{enumerate}
 
-于是后来新时代的异步I/O接口出现了：io\underline{~}uring，于Linux 5.1版本开始提供，统一了整个Linux平台上的异步I/O框架。\par
+以上种种因素使得Linux社区迎来了他们日思暮想的新时代的异步I/O接口。
+io\underline{~}uring，于Linux 5.1版本开始提供，统一了整个Linux平台上的异步I/O框架。\par
 
 \subsubsection{io\underline{~}uring设计目标}
 在Linux开发者们开始设计并代码实现io\underline{~}uring之前，他们设定了新接口的设计目标：
@@ -420,6 +421,10 @@ io\underline{~}uring中有两个基本操作：提交I/O请求和通知I/O完成
 io\underline{~}uring这种请求方式的优点在于：赋予用户程序批处理I/O请求的能力，并且仅需要进行一次系统调用。
 用户程序可以将一系列I/O请求提交到提交队列后，再进行系统调用一次提交给内核；同样，用户程序也可以
 一次性检查完成队列，对已完成的I/O事件进行统一处理。\par
+
+同时，io\underline{~}uring的整个I/O操作过程是完全异步的，用户完全可以在提交I/O请求后放心地去执行其他任务，
+而不用任何等待；当I/O操作完成时，内核将更新完成队列，用户可以在合适的时机检查完成队列，从而得知之前提交的
+I/O请求已经完成。\par
 
 \subsubsection{io\underline{~}uring数据结构}
 io\underline{~}uring分别使用\textbf{SQE}（Submission Queue Entry，提交队列条目）和\textbf{CQE}（Completion Queue Event，完成队列事件）
@@ -505,7 +510,7 @@ io\underline{~}uring\underline{~}enter用于：
 \end{itemize}
 
 用户往提交队列推入了新的I/O请求后或者从完成队列中获得了已完成的I/O事件后，可以通过该系统调用告知内核有新的I/O请求到达了
-或有已完成的I/O事件被收割了，内核会随之更新内部状态，维持两个队列的生产-消费平衡。\par
+或有已完成的I/O事件被收割了，内核会随之更新内部状态，维持两个队列的生产--消费平衡。\par
 
 \subsubsection{liburing库}
 从上面的分析可以感受到，即使io\underline{~}uring已经在API易用度上下了很大功夫，较之AIO接口简单易用许多，
