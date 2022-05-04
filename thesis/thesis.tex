@@ -20,6 +20,20 @@
 \usepackage{tikz}
 \usepackage{tikzscale}
 \usepackage{pgfplots}
+\usepackage{listings}
+
+\lstset{
+ columns=fixed,       
+ numberstyle=\tiny\color{gray},                       % 设定行号格式
+ frame=none,                                          % 不显示背景边框
+ backgroundcolor=\color[RGB]{245,245,244},            % 设定背景颜色
+ keywordstyle=\color[RGB]{40,40,255},                 % 设定关键字颜色
+ numberstyle=\footnotesize\color{darkgray},           
+ commentstyle=\it\color[RGB]{0,96,96},                % 设置代码注释的格式
+ stringstyle=\rmfamily\slshape\color[RGB]{128,0,0},   % 设置字符串格式
+ showstringspaces=false,                              % 不显示字符串中的空格
+ language=c,                                        % 设置语言
+}
 
 \pgfplotsset{compat=1.16}
 
@@ -383,8 +397,124 @@ io\underline{~}uring架构大致如下图：\par
 
 \cfig{io-uring}{0.8}{io\underline{~}uring架构图}
 
+io\underline{~}uring使用\textbf{共享内存}来实现内核态和用户态之间的信息交换。\par
+
+每个io\underline{~}uring实例里包含两个\textbf{环形缓冲区}，这两个环形缓冲区都实例化在共享内存里面，
+在用户态和内核态之间共享，分别是：
+
+\begin{enumerate}
+  \item 提交队列（Submission Queue，简称SQ），用于用户提交I/O请求和内核获取I/O请求；
+  \item 完成队列（Completion Queue，简称CQ），用于内核提交I/O完成事件和用户获取I/O完成信息。
+\end{enumerate}
+
+提交队列和完成队列均为单生产者单消费者模型，容量大小为2的幂次方，同时支持无锁并发，内部通过内存屏障技术实现状态同步。\par
+
+io\underline{~}uring中有两个基本操作：提交I/O请求和通知I/O完成事件：
+\begin{enumerate}
+  \item 对于提交I/O请求操作来说，用户线程是生产者，它在提交队列尾部推入I/O请求；
+    Linux内核是消费者，它从提交队列头部弹出一个I/O请求，然后递交到内核线程中进行处理。
+  \item 对于通知I/O完成事件操作来说，Linux内核是生产者，它在完成队列尾部推入I/O完成事件；
+    用户线程是消费者，它从完成队列头部弹出I/O完成事件，以此得知之前提交的I/O请求已经完成。
+\end{enumerate}
+
+io\underline{~}uring这种请求方式的优点在于：赋予用户程序批处理I/O请求的能力，并且仅需要进行一次系统调用。
+用户程序可以将一系列I/O请求提交到提交队列后，再进行系统调用一次提交给内核；同样，用户程序也可以
+一次性检查完成队列，对已完成的I/O事件进行统一处理。\par
+
 \subsubsection{io\underline{~}uring数据结构}
+io\underline{~}uring分别使用\textbf{SQE}（Submission Queue Entry，提交队列条目）和\textbf{CQE}（Completion Queue Event，完成队列事件）
+来描述I/O请求和I/O完成事件。这样个数据结构同时也分别是提交队列和完成队列中元素的数据结构。\par
+
+CQE数据结构：
+
+\begin{lstlisting}
+  struct io_uring_cqe {
+    __u64 user_data;
+    __s32 res;
+    __u32 flags;
+  };
+\end{lstlisting}
+
+\begin{itemize}
+  \item user\underline{~}data字段来自用户程序提交的I/O请求，内核不会对该字段进行任何修改，
+    仅仅是简单地从SQE里拷贝到CQE。该字段通常用于标识当前CQE对应于哪个I/O请求。
+  \item res字段中存放I/O请求的结果，在大部分情况下它等同于同步I/O中系统调用的返回值。举个例子，
+    对于类似于read(2)的读操作，如果该I/O请求成功了，res将会是完成传输的字节数；如果该I/O请求
+    出现异常，res将会是内核给出的错误码。
+  \item flags字段可能携带本次I/O操作携带的元数据，通常用于io\underline{~}uring中的高级用法。
+\end{itemize}
+
+SQE数据结构（省略某些字段）:
+
+\begin{lstlisting}
+  struct io_uring_sqe {
+    __u8 opcode;
+    __u8 flags;
+    __u16 ioprio;
+    __s32 fd;
+    __u64 off;
+    __u64 addr;
+    __u32 len;
+    __u64 user_data;
+    ...
+  };
+\end{lstlisting}
+
+\begin{itemize}
+  \item opcode字段描述了当前I/O请求的类型，比如类似read(2)的读请求的操作码为
+    IORING\underline{~}OP\underline{~}READ。
+  \item ioprio字段指示当前I/O请求的优先级。
+  \item fd字段表示一个文件描述符，可以是文件操作中的文件描述符，也可以是网络编程中的套接字。
+    比如，提交读请求的时候该字段应设为目标文件的文件描述符。
+  \item off字段在读操作中表示文件偏移量。
+  \item len字段在读操作中表示读取字节数的最大值。
+  \item user\underline{~}data字段是用户程序为当前I/O请求指定的标识，该字段会原封不动地被拷贝到
+    CQE中。当用户程序从完成队列中获取I/O完成事件时能通过该字段对应上相应的I/O请求。
+\end{itemize}
+
+提交队列和完成队列均为无锁数据结构，这意味io\underline{~}uring支持多个用户线程并发地进行提交I/O请求
+和收割I/O完成事件。io\underline{~}uring内部通过内存屏障技术保持并发时的数据一致性。\par
+
 \subsubsection{io\underline{~}uring用户接口}
+
+io\underline{~}uring向用户程序提供了三个系统调用：io\underline{~}uring\underline{~}setup，
+io\underline{~}uring\underline{~}register和io\underline{~}uring\underline{~}enter。\par
+
+io\underline{~}uring\underline{~}setup用于：
+
+\begin{itemize}
+  \item 初始化io\underline{~}uring实例和设置上下文环境；
+  \item 创建提交队列SQ和完成队列CQ；
+  \item 返回给用户程序一个文件描述符fd，后续与io\underline{~}uring相关的操作都在该fd上进行。
+\end{itemize}
+
+任何使用io\underline{~}uring的程序都应该从这个系统调用开始，完成环境初始化的工作。\par
+
+io\underline{~}uring\underline{~}register用于：
+\begin{itemize}
+  \item 在io\underline{~}uring实例中注册文件；
+  \item 在io\underline{~}uring实例中注册缓冲区。
+\end{itemize}
+
+该系统调用通常用于性能优化，注册文件或者缓冲区可以让内核长期持有对文件或缓冲区的引用，提高I/O处理的效率。\par
+
+io\underline{~}uring\underline{~}enter用于：
+\begin{itemize}
+  \item 提交新的I/O请求；
+  \item 收割已完成的I/O事件。
+\end{itemize}
+
+用户往提交队列推入了新的I/O请求后或者从完成队列中获得了已完成的I/O事件后，可以通过该系统调用告知内核有新的I/O请求到达了
+或有已完成的I/O事件被收割了，内核会随之更新内部状态，维持两个队列的生产-消费平衡。\par
+
+\subsubsection{liburing库}
+从上面的分析可以感受到，即使io\underline{~}uring已经在API易用度上下了很大功夫，较之AIO接口简单易用许多，
+但在实际使用过程中依然存在许多底层和细节的问题需要考虑，比如共享内存的映射。因此，io\underline{~}uring
+的主要开发者Jens Axboe同时编写了一个用户态的库，名为\textbf{liburing}\cite{repo2}，
+对io\underline{~}uring相关的一些底层细节
+进行了封装，向用户程序开发者提供了更加简洁易用的API。\par
+
+本课题中的项目实现也使用了liburing作为依赖库。\par
 
 \subsection{有栈协程与无栈协程}
 \subsection{Rust语言中的协程}
