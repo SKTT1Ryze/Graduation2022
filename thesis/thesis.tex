@@ -99,7 +99,7 @@
 这意味着每进行一次线程切换系统就浪费一次I/O的时间。
 面对线程切换开销重的现状，现代许多编程语言均提出了协程的概念，旨在提供一个更轻量，高效的并发编程模式。\par
 
-本毕业设计以异步IO和协程为基点，设计和实现一款高性能的异步编程框架。
+本毕业设计以异步I/O和协程为基点，设计和实现一款高性能的异步编程框架。
 基于Linux io\underline{~}uring为底层异步I/O接口和使用无栈协程作为并发编程模式，
 该框架具备高性能，低资源占用和易于编程的特点。
 同时，对此框架进行性能测试，实验结果验证了异步I/O模式和协程能实实在在地对系统性能产生积极的影响。
@@ -326,6 +326,66 @@ select, poll, epoll等机制就是典型的I/O复用模型\par
 \cfig{async-io}{0.7}{异步I/O模型}
 
 \subsection{Linux io\underline{~}uring}
+
+\subsubsection{旧时代的异步I/O接口：AIO}
+在io\underline{~}uring之前，Linux平台存在原生的异步I/O接口：AIO，但AIO的使用存在诸多限制：
+
+\begin{enumerate}
+  \item 最大的限制在于AIO仅支持无缓冲的I/O访问，而无缓冲的限制导致AIO接口在大部分场景下都不可用。
+    对于正常的带有缓冲的I/O访问来说，AIO接口的底层运作方式依然是同步的。
+  \item 尽管AIO接口的使用者满足了所有使得I/O操作异步的条件，有时候它依然不以异步的方式进行运作。
+    比如如果需要元数据来执行I/O操作，那么该I/O请求会被阻塞。
+  \item API设计不当，AIO接口的实现中存在较多对用户程序来说不需要的内存拷贝，这导致性能受到影响。
+\end{enumerate}
+
+在很长一段时间内，Linux内核开发者们为了解决上述的第一个限制煞费苦心，但依然没有得到令人满意的结果。
+与此同时，伴随着延迟达到10毫秒以下的高IOPS硬件设备的出现，AIO接口开始显得力不从心了。对于这些高速设备来说，
+Linux内核接口的低效反而成为了它们发挥极致性能的拖油瓶。\par
+
+最重要的是上述限制导致AIO接口在很多场景下都不可用，因此在很长一段时间内Linux平台都处于缺少异步I/O接口
+的状况，这给应用开发者带来了很大的困扰。即使开发者们可以在用户态通过线程池来模拟异步I/O的实现，
+但这终归不是一个根本的解决办法。\par
+
+Linux社区开发者们最初的想法是尝试改进AIO接口，并且持续了一段不短的时间，原因是：
+
+\begin{enumerate}
+  \item 如果有办法改善和优化现有的接口，会是相对于提供一个新接口的更优解。开发新接口不仅仅需要
+    接口开发者投入精力，还需要社区对其进行各方面的审核和最终批准，这无疑是一项艰巨且漫长的任务。
+  \item 对于应用开发者而言，新接口意味着他们要重新对应用程序进行兼容性适配，而扩展已有接口则只需要
+    他们进行微小的改动。
+\end{enumerate}
+
+但是最终Linux社区的内核开发者们还是选择了设计并实现一个新的接口，以此来填补Linux平台上异步I/O接口的欠缺。
+原因是：
+
+\begin{enumerate}
+  \item AIO接口存在三个系统调用，对多个系统调用的修改需要添加新的系统调用来传递信息，最终导致
+    代码复杂性增高和可维护性变低，而且这仅仅解决了AIO接口的其中一个较为突出的问题。
+  \item 修改AIO接口会引入新的问题（bug），或者会使得现有问题变得更加严重，比如会使得现有API变得复杂，难以使用。
+\end{enumerate}
+
+于是后来新时代的异步I/O接口出现了：io\underline{~}uring，于Linux 5.1版本开始提供，统一了整个Linux平台上的异步I/O框架。\par
+
+\subsubsection{io\underline{~}uring设计目标}
+在Linux开发者们开始设计并代码实现io\underline{~}uring之前，他们设定了新接口的设计目标：
+
+\begin{enumerate}
+  \item 易于使用，难以滥用；
+  \item 可扩展的，该接口不仅仅用于块存储，还可用于网络和非块存储；
+  \item 功能丰富；
+  \item 高性能。
+\end{enumerate}
+
+尽管上述目标之间存在互斥的现象，但开发者们以此为行动纲领开发了io\underline{~}uring接口。\par
+
+\subsubsection{io\underline{~}uring架构}
+io\underline{~}uring架构大致如下图：\par
+
+\cfig{io-uring}{0.8}{io\underline{~}uring架构图}
+
+\subsubsection{io\underline{~}uring数据结构}
+\subsubsection{io\underline{~}uring用户接口}
+
 \subsection{有栈协程与无栈协程}
 \subsection{Rust语言中的协程}
 \subsection{C++语言中的协程}
