@@ -650,9 +650,9 @@ Future中有且仅有一个\textbf{poll}方法，该方法需要传入一个\tex
 再去调用这个Future的poll方法，这时候返回Ready，就可以获得该Future的值了，代码得以继续执行下去。
 这样Future就和协程的概念对应上了。\par
 
-这里出现一个问题：谁来对已经挂起的Future进行恢复操作呢？答案是将会在下文介绍的执行器Executor。\par
+这里出现一个问题：这里的挂起和恢复操作谁来执行呢？答案是将会在下文介绍的执行器Executor。\par
 
-Future在Rust中是以接口的形式定义的，当一个结构体A实现了Future接口接口，则可以称A为一个Future。
+Future在Rust中是以接口的形式定义的，当一个结构体A实现了Future接口，则可以称A为一个Future。
 Future具有组合性，可以将多个叶子Future组合成一个大Future。比如\rfig{future}：
 
 \cfig{future}{0.4}{组合Future}
@@ -660,7 +660,7 @@ Future具有组合性，可以将多个叶子Future组合成一个大Future。�
 \rfig{future}的大Future由5个子Future组成，其中B，D，E为叶子Future。Future C有D，E两个子Future，
 因此Future C值的获得依赖于D，E值的获得，而最终大Future值的获得需要图中所有Future都获得返回值。
 这种模式同时契合程序员编写异步代码的思维习惯。比如实现一个复制文件的功能，我们需要先从一个文件中读取数据，
-然后再写入到另一个文件当中，这时候把读操作和写操作分别看作是一个Future的话，那么读Future和写Future就是
+然后再写入到另一个文件当中，这时候如果把读操作和写操作分别看作是一个Future的话，那么读Future和写Future就是
 两个叶子Future，而整个“复制文件”任务就是一个大Future。因此，在Rust异步编程中，一个异步任务往往是由一个或多个
 Future组成的。\par
 
@@ -681,17 +681,17 @@ Rust，JavaScript等语言现在依然保留这种回调方案，但大部分情
 \end{enumerate}
 
 async/await正是为了解决上述问题而被提出的另一种方案，
-async/await解决了传统异步编程的诸多痛点，同时能让开发者像写同步代码一样编写异步代码，
+它们解决了传统异步编程的诸多痛点，同时能让开发者像写同步代码一样编写异步代码，
 极大地降低了异步程序开发的难度。
-这也是为什么Rust 2018版本稳定了async/await语法后，
+这也是Rust 2018版本稳定了async/await语法后，
 Rust社区正式统一了协程标准，并且Rust异步编程成为系统编程领域的一大杀器的原因。
 
 async/await的主要作用是可以通过编译器生成Future：
-\begin{enumerate}
+\begin{itemize}
   \item 当一个函数或函数块被用async关键字修饰时，它的返回值会被编译器转换成Future；
   \item await关键字只能用于async函数或函数块中，并且作用对象只能是Future;
   \item await关键字的作用是调用子Future中的poll方法，并将结果（Ready/Pending）传递给大Future；
-\end{enumerate}
+\end{itemize}
 
 举个例子：
 \begin{lstlisting}
@@ -711,7 +711,7 @@ async/await的主要作用是可以通过编译器生成Future：
 
 \subsubsection{执行器Executor}
 协程被称为用户态线程，意味着需要有用户态的调度器来调度协程。在Rust中，同样需要一种协作式的调度管理机制，
-来管理和运行异步任务。负责这个工作的组件，被称为Executor（执行器）。\par
+在用户态管理和运行异步任务。负责这个工作的组件，被称为Executor（执行器）。\par
 
 Rust中协程通常被称为异步任务，异步任务通常是一个由多个子Future组合成的大Future，当存在多个异步任务的时候，
 就回到了如何调度并运行多个协程的问题。\par

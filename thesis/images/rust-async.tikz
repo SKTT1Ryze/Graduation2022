@@ -33,4 +33,5 @@
 \node at (2,-0.75) {Waiting Queue};
 \node at (-1,-1.25) {Reactor};
 \node at (-2,2) {Spawner};
+\node at (6,-1.25) {register Waker};
 \end{tikzpicture}
