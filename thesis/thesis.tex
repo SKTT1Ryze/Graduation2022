@@ -748,6 +748,21 @@ Reactor中，这样Reacotr才能够在事件来临时唤醒相应的Future。\pa
 \cfig{rust-async}{0.9}{Rust异步架构}
 
 \subsection{C++语言中的协程}
+在C++ 20之前，C++语言本身不支持协程。开发者只能通过第三方库来获得协程支持，比如微信团队开源的有栈协程库libco。\par
+
+C++ 20推出了无栈协程标准，标准里提供了co\underline{~}await等关键字
+用于异步编程。从本质上看，C++ 20的协程和Rust里的协程是一样的，均为通过状态机实现的无栈协程。\par
+
+由C++ 20协程引入的新概念主要是承诺类型Promise，Awaitable接口和三个新关键字：co\underline{~}await，co\underline{~}yield，
+co\underline{~}return。下面将通过这些概念介绍和分析C++ 20的协程。\par
+
+\subsubsection{承诺类型Promise}
+\subsubsection{Awaitable接口}
+\subsubsection{co\underline{~}await}
+\subsubsection{co\underline{~}yield}
+\subsubsection{co\underline{~}return}
+\subsubsection{C++异步编程架构}
+
 \subsection{异步编程框架}
 \subsection{本章小结}
 \section{系统设计}
