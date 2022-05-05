@@ -1,0 +1,8 @@
+\begin{tikzpicture}
+\node[box] {Future A}
+  child {node[box] {Future B}}
+  child {node[box] {Future C}
+    child {node[box] {Future D}}
+    child {node[box] {Future E}}
+  };
+\end{tikzpicture}

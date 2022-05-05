@@ -35,6 +35,17 @@
  language=c,                                        % 设置语言
 }
 
+\tikzset{
+  box/.style ={
+    rectangle, %矩形节点
+    rounded corners =5pt, %圆角
+    minimum width =50pt, %最小宽度
+    minimum height =20pt, %最小高度
+    inner sep=5pt, %文字和边框的距离
+    draw=blue %边框颜
+  }
+}
+
 \pgfplotsset{compat=1.16}
 
 \newcommand{\cfig}[3]{
@@ -610,6 +621,132 @@ io\underline{~}uring\underline{~}enter用于：
 \end{generaltab}
 
 \subsection{Rust语言中的协程}
+早期的Rust语言曾支持一个被称为\textbf{绿色线程}的有栈协程实现，但在0.7版本之后便废弃了。
+原因是如果Rust要支持绿色线程这样的机制，语言本身需要在运行时层面引入非常多的依赖，
+而这种依赖对于不使用绿色线程的代码来说单纯是一种负担。Rust的目标是构建一门零成本抽象的语言，
+不允许语言运行时层面存在不必要的开销，因此绿色线程最终被删除。\par
+
+随后，Rust尝试采用无栈协程的方案。终于在2018版本中，Rust稳定了async/await语法，这标志着Rust
+在协程和异步编程上的标准达到了统一。可以说，Rust的协程方案是现代编程语言中最为完美的。\par
+
+值得一提的是，在Rust语言中，通常不强调“协程”的概念，往往通过“异步任务”表示协程。
+在Rust中使用协程被称为“异步编程”。Rust异步编程主要涉及4个组件：Future，Executor，Waker和Reactor。
+在本节中，将主要通过这些组件介绍Rust异步编程的概念和原理。\par
+
+\subsubsection{Future}
+\textbf{Future}是Rust异步编程中最为核心的概念，它表示一个将来值，这个值可能现在无法获得，
+需要等到将来某个事件发生了才能获得。\par
+
+Future中有且仅有一个\textbf{poll}方法，该方法需要传入一个\textbf{Context}类型的参数，
+该参数表示该Future的上下文环境，返回值存在两种情况：
+
+\begin{enumerate}
+  \item Ready(value)，可以获得该Future的值value；
+  \item Pending，该Future的值还未准备好。
+\end{enumerate}
+
+前面提到协程的特点是支持挂起和恢复。那么回到Rust里面的Future，当调用一个Future上的poll方法后，
+返回值如果是Pending，那么意味着这个Future的值还没准备好，这时候需要挂起；当在适当时机恢复后，
+再去调用这个Future的poll方法，这时候返回Ready，就可以获得该Future的值了，代码得以继续执行下去。
+这样Future就和协程的概念对应上了。\par
+
+这里出现一个问题：谁来对已经挂起的Future进行恢复操作呢？答案是将会在下文介绍的执行器Executor。\par
+
+Future在Rust中是以接口的形式定义的，当一个结构体A实现了Future接口接口，则可以称A为一个Future。
+Future具有组合性，可以将多个叶子Future组合成一个大Future。比如\rfig{future}：
+
+\cfig{future}{0.4}{组合Future}
+
+\rfig{future}的大Future由5个子Future组成，其中B，D，E为叶子Future。Future C有D，E两个子Future，
+因此Future C值的获得依赖于D，E值的获得，而最终大Future值的获得需要图中所有Future都获得返回值。
+这种模式同时契合程序员编写异步代码的思维习惯。比如实现一个复制文件的功能，我们需要先从一个文件中读取数据，
+然后再写入到另一个文件当中，这时候把读操作和写操作分别看作是一个Future的话，那么读Future和写Future就是
+两个叶子Future，而整个“复制文件”任务就是一个大Future。因此，在Rust异步编程中，一个异步任务往往是由一个或多个
+Future组成的。\par
+
+\subsubsection{async/await语法糖}
+上节提到Future的组合性，多个子Future可以组合成一个大Future，并且不难想象这种组合需求在编写代码中是很常见的。
+但是Future表示的是一个将来值，怎么才能在代码里面将它们组合起来呢？\par
+
+早期的方案是通过回调函数解决的。比如有两个Future A，B，
+其中B依赖于A的返回值，想要实现A->B的Future组合子，就在B结构体里面保存一个回调函数，
+这个函数以A的返回值为参数，执行后将会返回B的返回值。当Future A的值返回了，就调用该回调函数，
+将该函数的返回值作为Future B的返回值返回。回调函数在这里起到了\textbf{延迟执行}的作用。\par
+
+Rust，JavaScript等语言现在依然保留这种回调方案，但大部分情况下都不建议使用它，理由是：
+\begin{enumerate}
+  \item 回调函数代码本身的可维护性极低，复杂项目中很可能找不到某个回调函数对应哪个Future；
+  \item 一旦子Future的数量较大，容易形成很长很长的回调链路，形成“回调地狱”；
+  \item 在Rust中，由于语言特性的问题，使用回调函数容易出现不必要的内存拷贝，降低效率。
+\end{enumerate}
+
+async/await正是为了解决上述问题而被提出的另一种方案，
+async/await解决了传统异步编程的诸多痛点，同时能让开发者像写同步代码一样编写异步代码，
+极大地降低了异步程序开发的难度。
+这也是为什么Rust 2018版本稳定了async/await语法后，
+Rust社区正式统一了协程标准，并且Rust异步编程成为系统编程领域的一大杀器的原因。
+
+async/await的主要作用是可以通过编译器生成Future：
+\begin{enumerate}
+  \item 当一个函数或函数块被用async关键字修饰时，它的返回值会被编译器转换成Future；
+  \item await关键字只能用于async函数或函数块中，并且作用对象只能是Future;
+  \item await关键字的作用是调用子Future中的poll方法，并将结果（Ready/Pending）传递给大Future；
+\end{enumerate}
+
+举个例子：
+\begin{lstlisting}
+  struct A {}
+  struct B {}
+  impl Future for struct A {...}
+  impl Future for struct B {...}
+
+  async foo() {
+    let a = A.await;
+    let b = b.await;
+  }
+\end{lstlisting}
+
+经过async关键字修饰后，foo函数的返回值就变成了一个大Future（假设为Foo），它由两个子Future A，B组成，
+它们之间的组合关系是A->B->Foo。编译器通过生成状态机代码来实现这种组合关系。\par
+
+\subsubsection{执行器Executor}
+协程被称为用户态线程，意味着需要有用户态的调度器来调度协程。在Rust中，同样需要一种协作式的调度管理机制，
+来管理和运行异步任务。负责这个工作的组件，被称为Executor（执行器）。\par
+
+Rust中协程通常被称为异步任务，异步任务通常是一个由多个子Future组合成的大Future，当存在多个异步任务的时候，
+就回到了如何调度并运行多个协程的问题。\par
+
+通常情况下会存在一个就绪队列和一个等待队列，Executor的执行算法如下：
+\begin{enumerate}
+  \item 从就绪队列中弹出一个异步任务，调用其的poll方法：
+    \begin{itemize}
+      \item 若返回Ready，表示该异步任务已经完成，重复1操作；
+      \item 若返回Pending，则将该异步任务放入等待队列，重复1操作。
+    \end{itemize}
+  \item 当就绪队列为空：
+    \begin{itemize}
+      \item 若等待队列不为空，阻塞直到等待队列中有新的异步任务被唤醒，放入到就绪队列，然后重复1操作；
+      \item 若等待队列为空，所有异步任务已经完成，Executor退出。
+    \end{itemize}
+\end{enumerate}
+
+\subsubsection{唤醒器Waker}
+\textbf{Waker}（唤醒器）主要用于唤醒异步任务。\par
+
+Waker和Future通常是一一绑定的关系，在上一小节就绪队列和等待队列的语境下，Waker的工作主要是
+将其绑定的Future从等待队列移动到就绪队列，以此来唤醒Future。\par
+
+\subsubsection{驱动器Reactor}
+Reactor（驱动器）也被称为反应器，主要作用是根据发生的事件，比如I/O完成事件，来驱动异步任务的唤醒。\par
+
+Waker通过Context参数传递给Future的poll方法，每个Future都应该在进行poll调用时，将Context中的Waker注册到
+Reactor中，这样Reacotr才能够在事件来临时唤醒相应的Future。\par
+
+\subsubsection{Rust异步编程架构}
+以架构图总结一下Rust异步编程：
+
+\cfig{rust-async}{0.9}{Rust异步架构}
+
 \subsection{C++语言中的协程}
 \subsection{异步编程框架}
 \subsection{本章小结}
