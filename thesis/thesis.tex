@@ -757,14 +757,82 @@ C++ 20推出了无栈协程标准，标准里提供了co\underline{~}await等关
 co\underline{~}return。下面将通过这些概念介绍和分析C++ 20的协程。\par
 
 \subsubsection{承诺类型Promise}
+
+在C++中协程被看成是可以挂起和恢复的函数，作为协程的函数的返回值必需包含\textbf{Promise}结构体。\par
+
+Promise主要包含以下方法：
+
+\begin{enumerate}
+  \item get\underline{~}return\underline{~}object：用于返回当前协程的句柄；
+  \item initial\underline{~}suspend：指定在协程初始化时是否立马挂起；
+  \item final\underline{~}suspend：指定在协程即将结束时是否挂起；
+  \item return\underline{~}value：获取协程的最终返回值；
+  \item unhandled\underline{~}exception：处理协程中被抛出的异常。
+\end{enumerate}
+
+当一个协程结束后，可以通过它的句柄获得最终返回值。\par
+
 \subsubsection{Awaitable接口}
+
+C++中的Awaitable接口本质上等同于Rust中的Future接口，只是在细节上有所不同。
+Awaitable接口主要包含以下方法：
+
+\begin{enumerate}
+  \item await\underline{~}ready：返回值为布尔类型，false表示该值没准备好，协程需要挂起，
+    接着调用2，等同于Future的Pending；true为该值已准备好，接着调用3，等同于Future的Ready；
+  \item await\underline{~}suspend：在1中返回false时调用，主要处理在协程被挂起前的准备工作；
+  \item await\underline{~}resume：在1中返回true时或者协程恢复时调用，返回该Awaitable对象的值。
+\end{enumerate}
+
+在C++中，如果一个对象实现了Awaitable接口，那么这个对象就变成了一个将来值，等同于Rust中的Future。\par
+
 \subsubsection{co\underline{~}await}
-\subsubsection{co\underline{~}yield}
+在C++中，co\underline{~}await关键字起到的作用和Rust中的await一致。
+Rust中await的对象必须是Future，而C++中co\underline{~}await的对象必须是Awaitable对象。\par
+
+C++编译器比如gcc会根据协程中co\underline{~}await的位置生成状态机代码实现无栈协程。\par
+
 \subsubsection{co\underline{~}return}
-\subsubsection{C++异步编程架构}
+
+co\underline{~}return 后面跟的表达式的值会作为参数传递给Promise中的return\underline{~}value方法，
+用于返回整个协程的值。\par
+
+\subsubsection{C++异步与Rust异步对比}
+
+\begin{generaltab}{C++异步vsRust异步}{tbl:hmm}
+  \begin{tabular}{c|ccc}
+    \toprule
+    -- & C++ & Rust \\
+    \midrule
+    协程称呼 & Coroutine & 异步任务 \\
+    协程类型 & 无栈协程 & 无栈协程 \\
+    将来值接口 & Awaitable & Future \\
+    协程挂起点 & co\underline{~}await指定 & await指定 \\
+    是否支持多次挂起 & 否 & 是 \\
+    协程恢复方式 & 对协程句柄调用resume() & 对Future调用poll() \\
+    \bottomrule
+  \end{tabular}
+\end{generaltab}
 
 \subsection{异步编程框架}
+
+经过上面的介绍，我们对异步I/O和Rust/C++协程有了初步的了解。接下来将进入本文的正题：
+设计和实现高性能的异步编程框架。\par
+
+什么是异步编程框架？前面介绍的无论是异步I/O还是协程的概念，都是比较偏系统底层的，
+要想正确理解和使用它们，需要开发者具备完整的操作系统和编译原理的知识体系。
+然而，许多应用开发者并不具备这样的能力，他们更多关注数据结构，算法和业务逻辑。
+在现代软件开发领域中，分层设计已成共识，因此要想一般应用开发者也能比较轻松地利用到异步I/O和协程的高性能，
+需要一个封装了异步I/O和协程概念，并向上层应用提供简单易用API的底层框架，这就是异步编程框架。\par
+
 \subsection{本章小结}
+
+本章我们首先从异步I/O入手，讨论了异步I/O与同步I/O的区别和性能优势；接着介绍了Linux平台上新增的io\underline{~}uring
+异步接口；然后以线程切换开销大为切入点，引出协程并介绍了协程在性能上的优势，同时对比分析了线程与协程；
+随后介绍了协程的分类和它们之间的区别；此外还详细介绍了Rust/C++中的协程实现；最后说明了异步编程框架的概念。\par
+
+下一章我们将进入正题，介绍和分析毕设项目的整体系统设计。\par
+
 \section{系统设计}
 \subsection{功能需求}
 \subsection{系统总体设计}
@@ -780,48 +848,6 @@ co\underline{~}return。下面将通过这些概念介绍和分析C++ 20的协�
 \subsection{性能测试}
 \subsection{本章小结}
 \section{总结与展望}
-
-\subsection{一张表}
-
-这是一张表。这是一张表。这是一张表。这是一张表。这是一张表。这是一张表。这是一
-张表。这是一张表。这是一张表。这是一张表。这是一张表。这是一张表。这是一张表。
-这是一张表。这是一张表。这是一张表。
-
-\begin{generaltab}{这是一张表}{tbl:hmm}
-  \begin{tabular}{c|ccc}
-    \toprule
-    我是字 & 第二列 & 第三列 & 第四列 \\
-    \midrule
-    第一行 & $1$ & $1$ & $4$ \\
-    第二行 & $5$ & $1$ & $4$ \\
-    \bottomrule
-  \end{tabular}
-\end{generaltab}
-
-\rtbl{hmm}是有味道的。
-
-我是字。我是字。我是字。我是字。我是字。我是字。我是字。我是字。我是字。我是字
-。我是字。我是字。我是字。我是字。我是字。我是字。我是字。我是字。我是字。我是
-字。我是字。我是字。我是字。我是字。我是字。我是字。我是字。我是字。
-
-\subsection{一堆表}
-
-这是一堆表。这是一堆表。这是一堆表。这是一堆表。这是一堆表。这是一堆表。这是一
-堆表。这是一堆表。这是一堆表。这是一堆表。这是一堆表。这是一堆表。这是一堆表。
-这是一堆图。这是一堆图。这是一堆图。
-
-\cfig{bpg-1}{0.8}{一张大图}
-
-\xfig{bpg-l}{两张小图}{
-  \sfig{bpg-la}{0.3}{小图}
-  \sfig{bpg-lb}{0.3}{小图}
-}
-
-\rfig{bpg-1}很好看，\rfig{bpg-la}和\rfig{bpg-lb}因为缩得太小了不那么好看。
-
-我是字。我是字。我是字。我是字。我是字。我是字。我是字。我是字。我是字。我是字
-。我是字。我是字。我是字。我是字。我是字。我是字。我是字。我是字。我是字。我是
-字。我是字。我是字。我是字。我是字。我是字。我是字。我是字。我是字。
 
 \begin{thankpage}
 
