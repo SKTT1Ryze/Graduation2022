@@ -834,9 +834,62 @@ co\underline{~}return 后面跟的表达式的值会作为参数传递给Promise
 下一章我们将进入正题，介绍和分析毕设项目的整体系统设计。\par
 
 \section{系统设计}
+上一章介绍了io\underline{~}uring，协程和异步编程框架的基本概念。在目前开源软件生态中，
+缺乏同时兼顾性能和易用性的开源异步编程框架。因此我们将基于io\underline{~}uring和协程，
+分别使用Rust和C++语言设计并实现一款简单易用的高性能异步编程框架，
+在贡献开源生态的同时，验证异步I/O和协程的可行性与高效性。\par
+
 \subsection{功能需求}
+
+\begin{enumerate}
+  \item 底层封装。对io\underline{~}uring和协程进行封装，在不向上暴露两者细节的同时，提供高性能接口；
+  \item 接口易用。向上提供用于构建网络应用和存储应用所需的简单易用的功能接口，例如TCP协议的连接；
+  \item 安全。框架需确保稳定可靠，不允许出现内存泄漏，死锁等问题；
+  \item 高性能。框架需要比目前主流的一些异步编程框架具备更高的性能。
+\end{enumerate}
+
 \subsection{系统总体设计}
+
+我们采用分模块的系统设计方法，将整个异步编程框架划分为以下几个模块：
+
+\begin{itemize}
+  \item I/O操作基本单元\textbf{Op}；
+  \item io\underline{~}uring对象\textbf{IoUring}；
+  \item 异步任务\textbf{Task};
+  \item 任务调度器\textbf{Scheduler};
+  \item 事件驱动模块\textbf{Reactor}；
+  \item 任务执行模块\textbf{Executor}；
+\end{itemize}
+
+它们之间的关系如\rfig{system-design}：\par
+
+\cfig{system-design}{0.9}{系统设计架构图}
+
+每个模块之间的关系应是独立解耦的，它们各自完成自己负责的工作，
+而互不干扰。模块解耦的设计既能带来代码编写和维护上的便利，
+同时也能增强整个系统的稳定性。\par
+
+此外，从应用视角来看，可以增加两个功能模块：
+
+\begin{itemize}
+  \item 文件操作模块；
+  \item 网络操作模块。
+\end{itemize}
+
+这两个模块的主要功能是生成应用相关的异步任务，比如TCP连接任务。\par
+
 \subsection{功能模块设计}
+本节将对系统设计中的各个模块进行详细介绍。\par
+
+\subsubsection{Op模块}
+\subsubsection{IoUring模块}
+\subsubsection{Task模块}
+\subsubsection{Scheduler模块}
+\subsubsection{Reactor模块}
+\subsubsection{Executor模块}
+
+\subsection{设计中考虑的制约因素}
+\subsection{成本估算}
 \subsection{本章小结}
 \section{系统实现}
 \subsection{xxx模块实现}
