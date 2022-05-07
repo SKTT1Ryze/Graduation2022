@@ -876,21 +876,163 @@ co\underline{~}return 后面跟的表达式的值会作为参数传递给Promise
   \item 网络操作模块。
 \end{itemize}
 
-这两个模块的主要功能是生成应用相关的异步任务，比如TCP连接任务。\par
+这两个模块的主要功能是生成应用相关的异步任务，比如TCP连接任务。
+向上层应用提供简单易用的功能接口，则主要是这两个模块的工作。\par
+
+在上述的模块当中，只有文件，网络操作模块为公开给外部的模块。
+基于以上设计，我们可以看到io\underline{~}uring和协程的概念被封装到了
+Op，IoUring，Executor等私有模块当中，向外暴露的只有文件，网络操作等与
+应用相关的模块及其接口，从而实现我们的“底层封装”需求。\par
 
 \subsection{功能模块设计}
 本节将对系统设计中的各个模块进行详细介绍。\par
 
 \subsubsection{Op模块}
+
+Op在本系统设计中指代I/O相关操作的基本单元，从面向对象角度考虑它可以被理解为所有
+I/O操作的\textbf{基类}。\par
+
+在Linux平台上，存在非常多的I/O操作，比如read(2)，write(2)，recv(2)等。
+如果不对它们进行统一抽象，在代码实现的时候将需要编写许多重复代码。\par
+
+而对于异步I/O接口io\underline{~}uring来说，不同I/O操作之间的区别仅仅在于
+它们往请求队列中提交的请求（SQE）中的数据不同。因此，采用面向对象的程序设计思想，
+我们定义一个名为Op的基类，基于这个基类可以派生出各种子类，
+这些子类则对应于Linux平台上的各种I/O操作。\par
+
+Op模块需要实现的功能包括：
+
+\begin{enumerate}
+  \item 创建I/O请求SQE；
+  \item 往io\underline{~}uring的提交队列中提交SQE；
+  \item 在提交SQE后挂起当前协程；
+  \item 在协程恢复后获得I/O操作的返回值。
+\end{enumerate}
+
+可以通过重写上述（1）中的功能达到派生子类的效果。\par
+
 \subsubsection{IoUring模块}
+
+IoUring在本系统设计中指代io\underline{~}uring的实例，
+从面向对象的角度考虑它可以被理解为一个提供io\underline{~}uring相关操作接口的类。
+比如Op需要往提交队列中提交请求，这时候它需要调用IoUring中的方法。\par
+
+IoUring模块需要实现的功能包括：
+
+\begin{enumerate}
+  \item 提供初始化io\underline{~}uring实例的接口；
+  \item 提供提交I/O请求的接口；
+  \item 提供返回I/O完成事件CQE的接口。
+\end{enumerate}
+
+上述接口（1）用于初始化io\underline{~}uring环境，接口（2）用于Op模块提交SQE，
+接口（3）用于Reactor模块收割CQE。\par
+
 \subsubsection{Task模块}
+
+Task在本系统设计中指代异步任务，或者协程，是Scheduler模块调度和Executor模块执行的基本单位。
+在Rust语言中，Task通常为一个Future；在C++语言中，Task通常为一个协程。\par
+
+Task可以由一个或多个Op的派生子对象组成。举个例子，假设Open和Read均为Op的派生子类，
+分别表示打开文件和读文件的I/O操作，那么一个读文件的Task就可以表示为\rfig{read-file}：
+
+\cfig{read-file}{0.4}{读文件Task}
+
+Task模块需要实现的功能包括：
+
+\begin{enumerate}
+  \item 提供创建Task的接口；
+  \item 提供挂起Task的接口；
+  \item 提供恢复Task的接口；
+  \item 提供获得Task返回值的接口。
+\end{enumerate}
+
+上述接口（1）用于创建异步任务或协程；接口（2）（3）分别用于Executor模块挂起和恢复异步任务或协程；
+接口（4）用于获取一个异步任务完成时的返回值。\par
+
 \subsubsection{Scheduler模块}
+
+Scheduler在本系统设计中指代任务调度器，
+主要负责内置调度算法，对异步任务或协程进行调度管理。
+在后期性能优化中，调度算法也是关注点之一。\par
+
+Scheduler模块需要实现的功能包括：
+
+\begin{enumerate}
+  \item 提供添加任务的接口；
+  \item 提供弹出任务的接口，该接口以CQE作为参数。
+\end{enumerate}
+
+上述接口（1）用于添加异步任务或协程；接口（2）用于Reactor模块从IoUring模块获得CQE后，
+以CQE为参数从调度器中弹出异步任务或协程。\par
+
 \subsubsection{Reactor模块}
+
+Reactor在本系统设计中指代事件驱动器，
+主要负责轮询io\underline{~}uring实例中的完成队列，收割CQE，
+并根据CQE唤醒对应的异步任务或协程。\par
+
+Reactor模块需要实现的功能是：轮询调用IoUring模块的接口（3），
+不断获取I/O完成事件CQE，并以CQE为参数调用Scheduler模块的接口（2），
+弹出异步任务或协程，将其送到Executor模块中执行。\par
+
 \subsubsection{Executor模块}
 
+Executor在本系统设计中指代任务执行器，
+主要负责接收异步任务或协程进行执行，恢复或挂起操作。\par
+
+Executor模块需要实现的功能包括：
+
+\begin{enumerate}
+  \item 执行或恢复执行异步任务或协程，直到切换点（await/co\underline{~}await）；
+  \item 若运行到切换点处时返回Pending或suspend，挂起当前异步任务或协程。
+\end{enumerate}
+
+上述接口（2）往往通过将异步任务或协程推入Scheduler模块实现挂起操作。\par
+
+\subsubsection{文件，网络操作模块}
+
+上面提到Task由一个或多个Op的派生子对象组成，而Op派生子类对应于Linux平台上的I/O操作。
+Linux平台上的诸多I/O操作大体可以分为两部分：文件和网络。
+文件操作包括打开文件（open(2)），读文件（read(2)）和写文件（write(2)）等等；
+网络操作包括监听（listen(2)），连接（accept(2)）和接收字节流（recv(2)）等等。\par
+
+本系统设计中的文件，网络操作模块主要负责生成各种Op派生子对象，
+用于构建异步任务或协程，并且通过这种方式，向上层应用提供简单易用的异步接口。\par
+
+文件，网络操作分别需要提供的接口如下：
+
+\begin{generaltab}{异步文件/网络接口}{tbl:hmm}
+  \begin{tabular}{c|ccc}
+    \toprule
+    文件 & 网络 \\
+    \midrule
+    打开文件 & 监听地址和端口 \\
+    读文件 & 处理TCP连接 \\
+    写文件 & 接收字节流 \\
+    关闭文件 & 发送字节流 \\
+    ... & ... \\
+    \bottomrule
+  \end{tabular}
+\end{generaltab}
+
+我们可以说文件，网络操作模块为应用层模块。\par
+
 \subsection{设计中考虑的制约因素}
+TODO
 \subsection{成本估算}
+
+本毕设的成本估算选用Putnam模型。\par
+
+在整个毕设开发过程中，编写源代码x行，持续开发时间为0.4年，技术状态为好，
+估算到开发工作量为y。\par
+
 \subsection{本章小结}
+
+本章我们首先从需求入手，首先讨论了异步编程框架设计中的功能需求；
+接着从整体介绍了系统的架构设计和该设计如何满足需求；随后详细介绍了各功能模块的职责和需要实现的功能或
+需要提供的接口；然后说明了设计中考虑的制约因素；最后估算了成本。\par
+
 \section{系统实现}
 \subsection{xxx模块实现}
 \subsection{xxx模块实现}
