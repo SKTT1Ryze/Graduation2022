@@ -1262,11 +1262,48 @@ SQE和CQE中都有个名为user\underline{~}data的字段，该字段不会被�
 \section{性能测试与分析}
 上一章详细介绍了两套分别用Rust语言和C++语言实现的异步编程框架Emma和Kuro的具体实现。
 在第三章需求分析环节中提到，高性能是我们的主要目标之一。
-因此在本章，我们将对Emma和Kuro进行功能测试和性能测试，
-在验证两个框架的功能正确实现的同时，证明两者拥有在当前开源生态中数一数二的高性能。\par
+因此在本章，我们将对Emma和Kuro进行性能测试，
+验证基于io\underline{~}和协程实现的异步编程框架具备高效性能。\par
 
 \subsection{测试环境}
-\subsection{功能测试}
+CPU：Intel(R) Xeon(R) Gold 5117 CPU @ 2.00GHz，56逻辑核，2物理核\par
+
+网卡：Ethernet controller: Intel Corporation Ethernet Connection X722 for 10GbE SFP+ (rev 09)\par
+
+操作系统：Linux ubuntu85 5.13.0-40-generic \#45-Ubuntu SMP Tue Mar 29 14:48:14 UTC 2022 x86\underline{~}64 x86\underline{~}64 x86\underline{~}64 GNU/Linux\par
+
+% \subsection{功能测试}
+% 功能测试主要注重于异步编程框架的功能实现是否正确。由于本毕设实现的框架提供的外部接口较多，
+% 考虑到篇幅受限，因此重点选择较为常用的一些接口进行功能测试。\par
+%
+% 从应用视角将功能测试分为文件部分和网络部分。\par
+%
+% \subsubsection{文件功能测试}
+% 文件部分主要对以下接口进行功能测试：
+%
+% \begin{enumerate}
+%   \item 打开文件；
+%   \item 读文件；
+%   \item 写文件。
+% \end{enumerate}
+%
+% 我们可以通过使用实现完成的异步编程框架Emma和Kuro编写一个复制文件的应用，即可完成以上接口的功能测试。\par
+%
+% \subsubsection{网络功能测试}
+%
+% 网络部分主要对以下接口进行功能测试：
+%
+% \begin{enumerate}
+%   \item 监听指定的IP地址和端口；
+%   \item 接受TCP连接；
+%   \item 接收字节流；
+%   \item 发送字节流。
+% \end{enumerate}
+%
+% 我们可以通过使用完成的异步编程框架Emma和Kuro编写一个简易HTTP服务器，即可完成以上接口的功能测试。\par
+%
+% \subsubsection{分析}
+
 \subsection{性能测试}
 \subsection{本章小结}
 \section{总结与展望}
