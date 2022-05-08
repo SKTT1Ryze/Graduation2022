@@ -1229,7 +1229,35 @@ SQE和CQE中都有个名为user\underline{~}data的字段，该字段不会被�
 这时候同样将CPU控制权让给其他模块，等待Reactor模块的下一次调用。\par
 
 \subsection{文件，网络操作模块实现}
+
+在第三章系统设计中介绍到，文件，网络操作模块用于向上层应用开发者提供异步文件和网络操作的接口，
+此模块属于应用层模块。\par
+
+基于整体的系统设计，文件，网络操作模块只需要生成Op基类的派生子对象，
+并将其打包成Task添加到Scheduler模块中，即可完成异步接口的实现。
+同时，继承Op基类的方法已经在Op模块的实现中指出，
+因此文件，网络操作模块需要做的是基于不同的I/O操作类型，完成不同Op派生子类的实现。\par
+
+举个例子，在C++中，实现异步读文件接口可以通过以下步骤：
+
+\begin{enumerate}
+  \item 定义一个名为\textbf{Read}的类，该类继承于Op基类；
+  \item 重写Read类的create\underline{~}sqe方法，使得create\underline{~}sqe返回一个I/O读请求的SQE；
+  \item 完成重写后，定义一个名为async\underline{~}read的函数，该函数返回一个Read对象，
+    则async\underline{~}read就是一个异步读文件的接口。
+\end{enumerate}
+
+在实际使用的时候，在协程中使用co\underline{~}await async\underline{~}read()，
+即可完成异步读文件接口的调用。\par
+
+打开文件，写文件，接受TCP请求等异步I/O接口也能通过上述例子的步骤实现，
+它们之间的区别仅仅是重写create\underline{~}sqe方法的方式不一样罢了，
+这里不一一阐述。此外，在Rust中实现异步I/O接口的方式也和上面例子差不多，
+区别仅在不是重写create\underline{~}sqe方法，而是实现SubOp接口罢了。\par
+
 \subsection{本章小结}
+
+本章主要对异步编程框架中的Op，Executor等模块的具体实现进行了详细的介绍。\par
 
 \section{性能测试与分析}
 \subsection{测试环境}
