@@ -439,57 +439,57 @@ I/O请求已经完成。\par
 
 \subsubsection{io\underline{~}uring数据结构}
 io\underline{~}uring分别使用\textbf{SQE}（Submission Queue Entry，提交队列条目）和\textbf{CQE}（Completion Queue Event，完成队列事件）
-来描述I/O请求和I/O完成事件。这样个数据结构同时也分别是提交队列和完成队列中元素的数据结构。\par
+来描述I/O请求和I/O完成事件。这两个数据结构同时也分别是提交队列和完成队列中元素的数据结构。\par
 
-CQE数据结构：
-
-\begin{lstlisting}
-  struct io_uring_cqe {
-    __u64 user_data;
-    __s32 res;
-    __u32 flags;
-  };
-\end{lstlisting}
-
-\begin{itemize}
-  \item user\underline{~}data字段来自用户程序提交的I/O请求，内核不会对该字段进行任何修改，
-    仅仅是简单地从SQE里拷贝到CQE。该字段通常用于标识当前CQE对应于哪个I/O请求。
-  \item res字段中存放I/O请求的结果，在大部分情况下它等同于同步I/O中系统调用的返回值。举个例子，
-    对于类似于read(2)的读操作，如果该I/O请求成功了，res将会是完成传输的字节数；如果该I/O请求
-    出现异常，res将会是内核给出的错误码。
-  \item flags字段可能携带本次I/O操作携带的元数据，通常用于io\underline{~}uring中的高级用法。
-\end{itemize}
-
-SQE数据结构（省略某些字段）:
-
-\begin{lstlisting}
-  struct io_uring_sqe {
-    __u8 opcode;
-    __u8 flags;
-    __u16 ioprio;
-    __s32 fd;
-    __u64 off;
-    __u64 addr;
-    __u32 len;
-    __u64 user_data;
-    ...
-  };
-\end{lstlisting}
-
-\begin{itemize}
-  \item opcode字段描述了当前I/O请求的类型，比如类似read(2)的读请求的操作码为
-    IORING\underline{~}OP\underline{~}READ。
-  \item ioprio字段指示当前I/O请求的优先级。
-  \item fd字段表示一个文件描述符，可以是文件操作中的文件描述符，也可以是网络编程中的套接字。
-    比如，提交读请求的时候该字段应设为目标文件的文件描述符。
-  \item off字段在读操作中表示文件偏移量。
-  \item len字段在读操作中表示读取字节数的最大值。
-  \item user\underline{~}data字段是用户程序为当前I/O请求指定的标识，该字段会原封不动地被拷贝到
-    CQE中。当用户程序从完成队列中获取I/O完成事件时能通过该字段对应上相应的I/O请求。
-\end{itemize}
-
-提交队列和完成队列均为无锁数据结构，这意味io\underline{~}uring支持多个用户线程并发地进行提交I/O请求
-和收割I/O完成事件。io\underline{~}uring内部通过内存屏障技术保持并发时的数据一致性。\par
+% CQE数据结构：
+%
+% \begin{lstlisting}
+%   struct io_uring_cqe {
+%     __u64 user_data;
+%     __s32 res;
+%     __u32 flags;
+%   };
+% \end{lstlisting}
+%
+% \begin{itemize}
+%   \item user\underline{~}data字段来自用户程序提交的I/O请求，内核不会对该字段进行任何修改，
+%     仅仅是简单地从SQE里拷贝到CQE。该字段通常用于标识当前CQE对应于哪个I/O请求。
+%   \item res字段中存放I/O请求的结果，在大部分情况下它等同于同步I/O中系统调用的返回值。举个例子，
+%     对于类似于read(2)的读操作，如果该I/O请求成功了，res将会是完成传输的字节数；如果该I/O请求
+%     出现异常，res将会是内核给出的错误码。
+%   \item flags字段可能携带本次I/O操作携带的元数据，通常用于io\underline{~}uring中的高级用法。
+% \end{itemize}
+%
+% SQE数据结构（省略某些字段）:
+%
+% \begin{lstlisting}
+%   struct io_uring_sqe {
+%     __u8 opcode;
+%     __u8 flags;
+%     __u16 ioprio;
+%     __s32 fd;
+%     __u64 off;
+%     __u64 addr;
+%     __u32 len;
+%     __u64 user_data;
+%     ...
+%   };
+% \end{lstlisting}
+%
+% \begin{itemize}
+%   \item opcode字段描述了当前I/O请求的类型，比如类似read(2)的读请求的操作码为
+%     IORING\underline{~}OP\underline{~}READ。
+%   \item ioprio字段指示当前I/O请求的优先级。
+%   \item fd字段表示一个文件描述符，可以是文件操作中的文件描述符，也可以是网络编程中的套接字。
+%     比如，提交读请求的时候该字段应设为目标文件的文件描述符。
+%   \item off字段在读操作中表示文件偏移量。
+%   \item len字段在读操作中表示读取字节数的最大值。
+%   \item user\underline{~}data字段是用户程序为当前I/O请求指定的标识，该字段会原封不动地被拷贝到
+%     CQE中。当用户程序从完成队列中获取I/O完成事件时能通过该字段对应上相应的I/O请求。
+% \end{itemize}
+%
+% 提交队列和完成队列均为无锁数据结构，这意味io\underline{~}uring支持多个用户线程并发地进行提交I/O请求
+% 和收割I/O完成事件。io\underline{~}uring内部通过内存屏障技术保持并发时的数据一致性。\par
 
 \subsubsection{io\underline{~}uring用户接口}
 
@@ -1034,9 +1034,203 @@ TODO
 需要提供的接口；然后说明了设计中考虑的制约因素；最后估算了成本。\par
 
 \section{系统实现}
-\subsection{xxx模块实现}
-\subsection{xxx模块实现}
+
+在上一章中我们进行了对异步编程框架的需求分析和整体系统设计，
+本章将会分模块地详细介绍系统的具体实现。\par
+
+在本毕设中，我们分别通过Rust语言和C++语言进行了系统实现，
+完成了两套异步编程框架，分别名为\textbf{Emma}（Rust）和\textbf{Kuro}（C++）。\par
+
+\subsection{Op模块实现}
+\subsubsection{Rust中的实现}
+在上一章提到，Op是所有io\underline{~}uring相关I/O操作的基类。
+然而，在Rust中没有面向对象编程的概念，因此这里通过\textbf{泛型}来模拟面向对象的思想。\par
+
+Rust中的泛型类似于C++中的模版（template）。泛型可以理解为类型的通配符，
+通过泛型可以实现编译期的\textbf{多态}。比如，结构体A<T>表示结构体A具有泛型参数T，
+T可以是任何类型，结构体A实例化的时候需要指定T的类型。
+此外，可以为泛型添加约束，假设B是一个接口，则A<T: B>中的T类型必须实现了B接口，
+否则编译器会报错。\par
+
+基于以上讨论，Rust中Op模块的实现步骤为：
+
+\begin{enumerate}
+  \item 定义一个接口SubOp，这个接口中只有一个方法create\underline{~}sqe，
+    用于创建I/O请求SQE；
+  \item 定义一个泛型结构体Op<T: SubOp>，其中T受到接口SubOp的约束，
+    必须实现create\underline{~}sqe方法；
+  \item 为结构体Op<T: SubOp>实现Future接口，该接口中唯一的poll方法的具体实现逻辑为：
+    \begin{itemize}
+      \item 调用类型T的create\underline{~}sqe方法，创建SQE；
+      \item 将SQE通过IoUring模块提供的接口提交到io\underline{~}uring的提交队列中，
+        然后返回Pending，挂起当前协程；
+      \item 当协程恢复时，从CQE中获取io\underline{~}uring返回值，并返回给调用方。
+    \end{itemize}
+  \item Op的子类通过实现SubOp接口来达到继承Op基类的效果。
+\end{enumerate}
+
+\subsubsection{C++中的实现}
+
+C++中支持面向对象思想，因此可以直接基于面向对象的编程方法进行Op模块的实现。\par
+
+C++中Op模块的实现步骤为：
+
+\begin{enumerate}
+  \item 定义一个基类Op；
+  \item 定义一个Op中的成员方法create\underline{~}sqe，用于创建I/O请求SQE；
+  \item 为基类Op实现Awaitable接口：
+    \begin{itemize}
+      \item await\underline{~}ready方法：直接返回false；
+      \item await\underline{~}suspend方法：先调用create\underline{~}sqe成员方法获得SQE，
+        然后将该SQE通过IoUring模块的接口提交到提交队列中，接着返回；
+      \item await\underline{~}resume方法：当调用该方法时，已经从IoUring模块中得到了
+        和await\underline{~}suspend中提交的SQE对应的CQE，因此直接返回CQE中的结果。
+    \end{itemize}
+  \item 为基类Op实现了Awaitable接口后，即为其实现了挂起当前协程的能力；
+  \item Op的子类可以通过重写create\underline{~}sqe方法实现对Op基类的继承。
+\end{enumerate}
+
+\subsection{IoUring模块实现}
+
+\subsubsection{Rust中的实现}
+
+在Rust中，我们用到一个第三方库\textbf{io-uring}来实现IoUring模块。\par
+
+io-uring是一个对io\underline{~}uring相关底层接口进行封装的Rust第三方库，
+它提供一个IoUring结构体，同时为这个结构体实现了一系列方法用于对io\underline{~}uring实例进行操作。\par
+
+基于io-uring库实现IoUring模块的步骤为：
+
+\begin{enumerate}
+  \item 引用io-uring库的IoUring结构体；
+  \item 使用IoUring结构体的new方法作为初始化io\underline{~}uring实例的外部接口；
+  \item 使用IoUring结构体的submitter方法作为提交I/O请求的外部接口；
+  \item 使用IoUring结构体的completion方法作为返回I/O完成事件CQE的外部接口。
+\end{enumerate}
+
+\subsubsection{C++中的实现}
+
+在第二章提到，io\underline{~}uring的作者编写了一个用户态库\textbf{liburing}，
+它是一个和Rust中io-uring库同等性质的C语言第三方库，封装了io\underline{~}uring相关的底层接口。\par
+
+在C++中，我们使用liburing库实现IoUring模块：
+
+\begin{enumerate}
+  \item 引用liburing库的io\underline{~}uring结构体；
+  \item 使用liburing库提供的io\underline{~}uring\underline{~}queue\underline{~}init函数作为
+    初始化io\underline{~}uring实例的外部接口；
+  \item 使用liburing库提供的io\underline{~}uring\underline{~}submit函数作为提交I/O请求的外部接口；
+  \item 使用liburing库提供的io\underline{~}uring\underline{~}for\underline{~}each\underline{~}cqe
+    宏函数作为返回I/O完成事件CQE的外部接口。
+\end{enumerate}
+
+\subsection{Task模块实现}
+
+\subsubsection{Rust中的实现}
+
+在Rust中，Task等同于异步任务，而在第二章介绍过Rust里面异步任务通常是一个大Future，
+由一个或多个子Future组成，async/await关键字能帮助我们创建大Future。\par
+
+因此，在Rust中Task模块的实现步骤为：
+
+\begin{enumerate}
+  \item 使用async关键字创建Task；
+  \item 使用await关键字挂起Task；
+  \item 通过对Task调用Future接口中的poll方法来恢复Task；
+  \item Task运行结束后从Future接口中的poll方法的返回值获取整个Task的返回值。
+\end{enumerate}
+
+\subsubsection{C++中的实现}
+
+在C++中，Task等同于协程。在第二章中介绍过C++中协程被看成是可以挂起和恢复的函数，
+作为协程的函数的返回值必需实现Promise接口。\par
+
+因此，在C++中Task模块的实现步骤为：
+
+\begin{enumerate}
+  \item 定义一个模版类Task<T>；
+  \item 为Task<T>实现Promise接口：
+    \begin{itemize}
+      \item get\underline{~}return\underline{~}object方法：通过this指针构造协程句柄，
+        然后将此句柄返回；
+      \item initial\underline{~}suspend方法：直接返回suspend\underline{~}never；
+      \item final\underline{~}suspend方法：直接返回suspend\underline{~}never；
+      \item return\underline{~}value方法：该方法会传入T类型的参数v，将v拷贝到Task<T>中。
+    \end{itemize}
+  \item 为Task<T>实现Promise接口后，返回值为Task<T>的函数均被作为协程看待，
+    因此调用此类函数即可创建Task；
+  \item 在返回值为Task<T>的函数中使用co\underline{~}await关键字来挂起Task；
+  \item 通过调用协程句柄的resume方法来恢复Task；
+  \item 当协程运行到co\underline{~}return关键字处时，其后面跟的值会被作为参数调用Promise接口
+    中的方法return\underline{~}value，因此该值会被保存在Task<T>对象中。
+    当协程运行结束后，可以从Task<T>对象中获取返回值。
+\end{enumerate}
+
+\subsection{Scheduler模块实现}
+
+针对Scheduler模块，Rust和C++实现中都使用到了一种名为\textbf{Slab}的数据结构。
+Slab是一种内存分配器，它通过预先申请固定大小的内存，减少调用方申请内存空间的次数，
+提高性能。\par
+
+Slab提供的外部接口如下：
+
+\begin{enumerate}
+  \item new方法：创建固定大小的Slab；
+  \item capacity方法：返回容量；
+  \item len方法：返回当前长度；
+  \item insert方法：插入一个元素，并返回一个token；
+  \item get方法：通过token获取元素引用；
+  \item remove方法：通过token弹出元素。
+\end{enumerate}
+
+此外，在第二章介绍io\underline{~}uring提到，用户可以通过往提交队列添加SQE来提交I/O请求和从完成队列收割CQE
+来获取I/O完成事件，但在完成队列中CQE不是按序到达的，这样一来如何直到CQE对应哪个SQE呢？事实上，
+SQE和CQE中都有个名为user\underline{~}data的字段，该字段不会被操作系统内核修改，它是用户在SQE中传入的，
+并且会被原封不动地在CQE中返回给用户，用于识别该CQE对应于哪个SQE。\par
+
+因此，在Rust和C++中Scheduler模块的实现步骤均为：
+
+\begin{enumerate}
+  \item 使用Slab数据结构保存Task模块；
+  \item 通过调用Slab的insert方法来实现添加任务接口，这时候insert函数调用返回一个token；
+    接着把这个token注册到CQE中；
+  \item 通过Slab的remove方法实现弹出任务接口：
+    \begin{itemize}
+      \item 外部模块调用此接口时，会传入一个CQE参数；
+      \item 使用CQE中的user\underline{~}data字段作为token调用remove方法，弹出任务。
+    \end{itemize}
+\end{enumerate}
+
+\subsection{Reactor模块实现}
+
+在Rust和C++中，Reactor模块的实现步骤均为：
+
+\begin{enumerate}
+  \item 在一个大循环中，不断轮询调用IoUring模块的获取CQE的接口；
+  \item 在循环体中，获取到CQE后，以CQE为参数从Scheduler模块中弹出任务Task；
+  \item 以Task为参数调用Executor模块执行任务的接口。
+\end{enumerate}
+
+\subsection{Executor模块实现}
+
+\subsubsection{Rust中的实现}
+
+在Rust中，Executor模块的实现步骤为：对Task调用Future接口中的poll方法，
+若返回Pending，则调用Scheduler模块的添加任务接口，
+将该Task重新放入到Scheduler模块中，即将Task挂起；
+若返回Ready，则表示Task运行结束，这时候把CPU控制权让给其他模块，
+等待Reactor模块的下一次调用。\par
+
+\subsubsection{C++中的实现}
+
+在C++中，Executor模块的实现步骤为：对Task调用resume方法，
+当运行到co\underline{~}await处并需要挂起协程时，执行流会直接返回到调用resume方法的下一行，
+这是C++编译器做的工作；当resume方法运行完成时，表示该Task运行结束，
+这时候同样将CPU控制权让给其他模块，等待Reactor模块的下一次调用。\par
+
+\subsection{文件，网络操作模块实现}
 \subsection{本章小结}
+
 \section{性能测试与分析}
 \subsection{测试环境}
 \subsection{功能测试}
