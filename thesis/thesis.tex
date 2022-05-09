@@ -1344,20 +1344,68 @@ CPU：Intel(R) Xeon(R) Gold 5117 CPU @ 2.00GHz，56逻辑核，2物理核\par
 
 \begin{tikzpicture}
   \begin{axis}[
-      title={M=1M, L=4},
+      title={M=1 KB, L=1},
       xlabel={Number of files(N)},
-      ylabel={Cost of time},
+      ylabel={Cost of time [ms]},
       legend pos=north west
     ]
     
-    \addplot[color=red]
+    \addplot[color=blue, smooth]
     coordinates {
-      (0,0)
-      (1,20)
-      (2,30)
+      (512,127.8)
+      (1024,147.6)
+      (1024*2,174.6)
+      (1024*3,186.2)
+      (1024*4,235.4)
+      (1024*5,262.6)
+      (1024*6,270.6)
+      (1024*7,313)
+      (1024*8,331.4)
     };
-    \legend{Tokio}
-  
+    \addlegendentry{Kuro}
+
+    \addplot[color=black, smooth]
+    coordinates {
+      (512,97.8)
+      (1024,116.2)
+      (1024*2,142.8)
+      (1024*3,163)
+      (1024*4,182.6)
+      (1024*5,206.6)
+      (1024*6,230.6)
+      (1024*7,249.2)
+      (1024*8,276.8)
+    };
+    \addlegendentry{Emma}
+
+    \addplot[color=red, smooth]
+    coordinates {
+      (512,155.6)
+      (1024,205.8)
+      (1024*2,225.4)
+      (1024*3,258.6)
+      (1024*4,313.2)
+      (1024*5,331.6)
+      (1024*6,348.4)
+      (1024*7,390.6)
+      (1024*8,436.4)
+    };
+    \addlegendentry{Tokio}
+    
+    \addplot[color=green, smooth]
+    coordinates {
+      (512,139.6)
+      (1024,216.8)
+      (1024*2,314.8)
+      (1024*3,421.8)
+      (1024*4,533.4)
+      (1024*5,620)
+      (1024*6,740.6)
+      (1024*7,844.6)
+      (1024*8,940.6)
+    };
+    \addlegendentry{async-std}
+
   \end{axis}
 \end{tikzpicture}
 
