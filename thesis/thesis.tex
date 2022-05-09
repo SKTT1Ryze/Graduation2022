@@ -1347,10 +1347,11 @@ CPU：Intel(R) Xeon(R) Gold 5117 CPU @ 2.00GHz，56逻辑核，2物理核\par
       title={M=1 KB, L=1},
       xlabel={Number of files(N)},
       ylabel={Cost of time [ms]},
+      legend style={nodes={scale=0.7, transform shape}},
       legend pos=north west
     ]
     
-    \addplot[color=blue, smooth]
+    \addplot[color=red, mark=square]
     coordinates {
       (512,127.8)
       (1024,147.6)
@@ -1364,7 +1365,7 @@ CPU：Intel(R) Xeon(R) Gold 5117 CPU @ 2.00GHz，56逻辑核，2物理核\par
     };
     \addlegendentry{Kuro}
 
-    \addplot[color=black, smooth]
+    \addplot[color=black, mark=square]
     coordinates {
       (512,97.8)
       (1024,116.2)
@@ -1378,7 +1379,7 @@ CPU：Intel(R) Xeon(R) Gold 5117 CPU @ 2.00GHz，56逻辑核，2物理核\par
     };
     \addlegendentry{Emma}
 
-    \addplot[color=red, smooth]
+    \addplot[color=orange, mark=square]
     coordinates {
       (512,155.6)
       (1024,205.8)
@@ -1392,7 +1393,103 @@ CPU：Intel(R) Xeon(R) Gold 5117 CPU @ 2.00GHz，56逻辑核，2物理核\par
     };
     \addlegendentry{Tokio}
     
-    \addplot[color=green, smooth]
+    \addplot[color=green, mark=square]
+    coordinates {
+      (512,139.6)
+      (1024,216.8)
+      (1024*2,314.8)
+      (1024*3,421.8)
+      (1024*4,533.4)
+      (1024*5,620)
+      (1024*6,740.6)
+      (1024*7,844.6)
+      (1024*8,940.6)
+    };
+    \addlegendentry{async-std}
+    
+    \addplot[color=blue, mark=square]
+    coordinates {
+      (512,80.6)
+      (1024,91.4)
+      (1024*2,118.2)
+      (1024*3,175)
+      (1024*4,215.2)
+      (1024*5,235.6)
+      (1024*6,253.2)
+      (1024*7,302.8)
+      (1024*8,317.4)
+    };
+    \addlegendentry{Go}
+    
+    \addplot[color=purple, mark=square]
+    coordinates {
+      (512,21)
+      (1024,34.2)
+      (1024*2,56.6)
+      (1024*3,79.6)
+      (1024*4,101.2)
+      (1024*5,120.6)
+      (1024*6,144.4)
+      (1024*7,166.4)
+      (1024*8,186.6)
+    };
+    \addlegendentry{Sync}
+
+  \end{axis}
+\end{tikzpicture}
+
+\begin{tikzpicture}
+  \begin{axis}[
+      title={M=1 KB, L=32},
+      xlabel={Number of files(N)},
+      ylabel={Cost of time [ms]},
+      legend style={nodes={scale=0.7, transform shape}},
+      legend pos=north west
+    ]
+    
+    \addplot[color=red, mark=square]
+    coordinates {
+      (512,122)
+      (1024,156.2)
+      (1024*2,178.6)
+      (1024*3,179.8)
+      (1024*4,180)
+      (1024*5,189)
+      (1024*6,194.2)
+      (1024*7,195.6)
+      (1024*8,197.8)
+    };
+    \addlegendentry{Kuro}
+
+    \addplot[color=black, mark=square]
+    coordinates {
+      (512,93.6)
+      (1024,90.2)
+      (1024*2,101)
+      (1024*3,107.2)
+      (1024*4,104.2)
+      (1024*5,113.4)
+      (1024*6,112)
+      (1024*7,119.6)
+      (1024*8,112.4)
+    };
+    \addlegendentry{Emma}
+    
+    \addplot[color=orange, mark=square]
+    coordinates {
+      (512,171.8)
+      (1024,209.2)
+      (1024*2,284.8)
+      (1024*3,348.4)
+      (1024*4,437.2)
+      (1024*5,495.4)
+      (1024*6,577.4)
+      (1024*7,654.8)
+      (1024*8,750.2)
+    };
+    \addlegendentry{Tokio}
+
+    \addplot[color=green, mark=square]
     coordinates {
       (512,139.6)
       (1024,216.8)
@@ -1406,8 +1503,37 @@ CPU：Intel(R) Xeon(R) Gold 5117 CPU @ 2.00GHz，56逻辑核，2物理核\par
     };
     \addlegendentry{async-std}
 
+    \addplot[color=blue, mark=square]
+    coordinates {
+      (512,80.6)
+      (1024,91.4)
+      (1024*2,118.2)
+      (1024*3,175)
+      (1024*4,215.2)
+      (1024*5,235.6)
+      (1024*6,253.2)
+      (1024*7,302.8)
+      (1024*8,317.4)
+    };
+    \addlegendentry{Go}
+
+    \addplot[color=purple, mark=square]
+    coordinates {
+      (512,4)
+      (1024,7)
+      (1024*2,13)
+      (1024*3,19)
+      (1024*4,23)
+      (1024*5,28)
+      (1024*6,31)
+      (1024*7,35)
+      (1024*8,39)
+    };
+    \addlegendentry{Sync}
+
   \end{axis}
 \end{tikzpicture}
+
 
 \subsubsubsection{结果分析}
 
@@ -1447,37 +1573,41 @@ ab是Apache旗下的一个用于测试Web服务器性能的压力测试工具，
   \begin{axis}[
       title={C=20, L=32},
       xlabel={Number of requests(N)},
-      ylabel={Throughput [request per second]},
-      legend pos=north west
-    ]
-    
-    \addplot[color=red]
-    coordinates {
-      (0,0)
-      (1,20)
-      (2,30)
-    };
-    \legend{Tokio}
-  
-  \end{axis}
-\end{tikzpicture}
-
-\begin{tikzpicture}
-  \begin{axis}[
-      title={C=20, L=32},
-      xlabel={Number of requests(N)},
       ylabel={Tail latency [ms]},
+      legend style={nodes={scale=0.7, transform shape}},
       legend pos=north west
     ]
     
     \addplot[color=red]
     coordinates {
-      (0,0)
-      (1,20)
-      (2,30)
+      (2000,1014.75)
+      (4000,716.25)
+      (6000,857.81)
+      (8000,555.05)
+      (10000,449.41)
+      (12000,325)
+      (14000,362.92)
+      (16000,307.48)
+      (18000,283.32)
+      (20000,293.67)
     };
-    \legend{Tokio}
+    \addlegendentry{Kuro}
   
+    \addplot[color=purple]
+    coordinates {
+      (2000,855)
+      (4000,511)
+      (6000,426)
+      (8000,323.05)
+      (10000,317.41)
+      (12000,301.09)
+      (14000,269.92)
+      (16000,277.48)
+      (18000,276.32)
+      (20000,279.67)
+    };
+    \addlegendentry{Sync}
+
   \end{axis}
 \end{tikzpicture}
 \subsubsubsection{结果分析}
