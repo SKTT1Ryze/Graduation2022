@@ -1554,12 +1554,7 @@ CPU：Intel(R) Xeon(R) Gold 5117 CPU @ 2.00GHz，56逻辑核，2物理核\par
   \item CPU核数L。
 \end{enumerate}
 
-测试指标包括：
-
-\begin{enumerate}
-  \item 服务器吞吐量（请求数/秒）；
-  \item 尾延迟（毫秒）。
-\end{enumerate}
+测试指标为服务器吞吐量（请求数/秒）；
 
 我们使用Apache Benchmark（简称ab）工具来模拟多客户端的并发请求。
 ab是Apache旗下的一个用于测试Web服务器性能的压力测试工具，
@@ -1571,11 +1566,11 @@ ab是Apache旗下的一个用于测试Web服务器性能的压力测试工具，
 
 \begin{tikzpicture}
   \begin{axis}[
-      title={C=20, L=32},
+      title={C=20, L=54},
       xlabel={Number of requests(N)},
-      ylabel={Tail latency [ms]},
+      ylabel={Throughput [requests per second]},
       legend style={nodes={scale=0.7, transform shape}},
-      legend pos=north west
+      legend pos=north east
     ]
     
     \addplot[color=red]
@@ -1593,6 +1588,66 @@ ab是Apache旗下的一个用于测试Web服务器性能的压力测试工具，
     };
     \addlegendentry{Kuro}
   
+    \addplot[color=black]
+    coordinates {
+      (2000,1088)
+      (4000,674)
+      (6000,722)
+      (8000,783)
+      (10000,307.58)
+      (12000,375.45)
+      (14000,303.54)
+      (16000,348.05)
+      (18000,284.63)
+      (20000,294.31)
+    };
+    \addlegendentry{Emma}
+    
+    \addplot[color=orange]
+    coordinates {
+      (2000,993.34)
+      (4000,762.11)
+      (6000,684.81)
+      (8000,350.44)
+      (10000,350.68)
+      (12000,310.33)
+      (14000,289.6)
+      (16000,307.30)
+      (18000,284.48)
+      (20000,294.51)
+    };
+    \addlegendentry{Tokio}
+
+    \addplot[color=green]
+    coordinates {
+      (2000,745)
+      (4000,710)
+      (6000,694.98)
+      (8000,491.11)
+      (10000,268)
+      (12000,269.29)
+      (14000,335.21)
+      (16000,292.36)
+      (18000,277.43)
+      (20000,293.38)
+    };
+    \addlegendentry{async-std}
+
+    \addplot[color=blue]
+    coordinates {
+      (2000,278.65)
+      (4000,280)
+      (6000,285.5)
+      (8000,65.63)
+      (10000,35.68)
+      (12000,79.89)
+      (14000,68.74)
+      (16000,71.35)
+      (18000,64.78)
+      (20000,68.78)
+    };
+    \addlegendentry{Go}
+
     \addplot[color=purple]
     coordinates {
       (2000,855)
@@ -1610,6 +1665,50 @@ ab是Apache旗下的一个用于测试Web服务器性能的压力测试工具，
 
   \end{axis}
 \end{tikzpicture}
+
+
+\begin{tikzpicture}
+  \begin{axis}[
+      title={C=200, L=54},
+      xlabel={Number of requests(N)},
+      ylabel={Throughput [requests per second]},
+      legend style={nodes={scale=0.7, transform shape}},
+      legend pos=north east
+    ]
+
+    \addplot[color=red]
+    coordinates {
+      (2000,1848.60)
+      (4000,1804.40)
+      (6000,1817.68)
+      (8000,860.36)
+      (10000,513.02)
+      (12000,496.14)
+      (14000,468.13)
+      (16000,401.29)
+      (18000,607.912)
+      (20000,410.65)
+    };
+    \addlegendentry{Kuro}
+
+    \addplot[color=purple]
+    coordinates {
+      (2000,1037.15)
+      (4000,1365.26)
+      (6000,1368.78)
+      (8000,377.95)
+      (10000,366.30)
+      (12000,433.49)
+      (14000,390.28)
+      (16000,378.81)
+      (18000,363.93)
+      (20000,374.68)
+    };
+    \addlegendentry{Sync}
+
+  \end{axis}
+\end{tikzpicture}
+
 \subsubsubsection{结果分析}
 
 \subsection{本章小结}
