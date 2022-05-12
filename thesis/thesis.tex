@@ -553,56 +553,6 @@ I/O请求已经完成。\par
 io\underline{~}uring分别使用\textbf{SQE}（Submission Queue Entry，提交队列条目）和\textbf{CQE}（Completion Queue Event，完成队列事件）
 来描述I/O请求和I/O完成事件。这两个数据结构同时也分别是提交队列和完成队列中元素的数据结构。\par
 
-% CQE数据结构：
-%
-% \begin{lstlisting}
-%   struct io_uring_cqe {
-%     __u64 user_data;
-%     __s32 res;
-%     __u32 flags;
-%   };
-% \end{lstlisting}
-%
-% \begin{itemize}
-%   \item user\underline{~}data字段来自用户程序提交的I/O请求，内核不会对该字段进行任何修改，
-%     仅仅是简单地从SQE里拷贝到CQE。该字段通常用于标识当前CQE对应于哪个I/O请求。
-%   \item res字段中存放I/O请求的结果，在大部分情况下它等同于同步I/O中系统调用的返回值。举个例子，
-%     对于类似于read(2)的读操作，如果该I/O请求成功了，res将会是完成传输的字节数；如果该I/O请求
-%     出现异常，res将会是内核给出的错误码。
-%   \item flags字段可能携带本次I/O操作携带的元数据，通常用于io\underline{~}uring中的高级用法。
-% \end{itemize}
-%
-% SQE数据结构（省略某些字段）:
-%
-% \begin{lstlisting}
-%   struct io_uring_sqe {
-%     __u8 opcode;
-%     __u8 flags;
-%     __u16 ioprio;
-%     __s32 fd;
-%     __u64 off;
-%     __u64 addr;
-%     __u32 len;
-%     __u64 user_data;
-%     ...
-%   };
-% \end{lstlisting}
-%
-% \begin{itemize}
-%   \item opcode字段描述了当前I/O请求的类型，比如类似read(2)的读请求的操作码为
-%     IORING\underline{~}OP\underline{~}READ。
-%   \item ioprio字段指示当前I/O请求的优先级。
-%   \item fd字段表示一个文件描述符，可以是文件操作中的文件描述符，也可以是网络编程中的套接字。
-%     比如，提交读请求的时候该字段应设为目标文件的文件描述符。
-%   \item off字段在读操作中表示文件偏移量。
-%   \item len字段在读操作中表示读取字节数的最大值。
-%   \item user\underline{~}data字段是用户程序为当前I/O请求指定的标识，该字段会原封不动地被拷贝到
-%     CQE中。当用户程序从完成队列中获取I/O完成事件时能通过该字段对应上相应的I/O请求。
-% \end{itemize}
-%
-% 提交队列和完成队列均为无锁数据结构，这意味io\underline{~}uring支持多个用户线程并发地进行提交I/O请求
-% 和收割I/O完成事件。io\underline{~}uring内部通过内存屏障技术保持并发时的数据一致性。\par
-
 \subsubsection{io\underline{~}uring用户接口}
 
 io\underline{~}uring向用户程序提供了三个系统调用：io\underline{~}uring\underline{~}setup，
@@ -674,7 +624,292 @@ io\underline{~}uring\underline{~}enter用于：
   \end{tabular}
 \end{generaltab}
 
-\subsection{Rust语言中的协程}
+\subsection{异步编程框架}
+
+经过上面的介绍，我们对异步I/O和协程有了初步的了解。接下来将进入本文的正题：
+设计和实现高性能的异步编程框架。\par
+
+什么是异步编程框架？前面介绍的无论是异步I/O还是协程的概念，都是比较偏系统底层的，
+要想正确理解和使用它们，需要开发者具备完整的操作系统和编译原理的知识体系。
+然而，许多应用开发者并不具备这样的能力，他们更多关注数据结构，算法和业务逻辑。
+在现代软件开发领域中，分层设计已成共识，因此要想一般应用开发者也能比较轻松地利用到异步I/O和协程的高性能，
+需要一个封装了异步I/O和协程概念，并向上层应用提供简单易用API的底层框架，这就是异步编程框架。\par
+
+\subsection{本章小结}
+
+本章我们首先从异步I/O入手，讨论了异步I/O与同步I/O的区别和性能优势；接着介绍了Linux平台上新增的io\underline{~}uring
+异步接口；然后以线程切换开销大为切入点，引出协程并介绍了协程在性能上的优势，同时对比分析了线程与协程；
+随后介绍了协程的分类和它们之间的区别；最后说明了异步编程框架的概念。\par
+
+下一章我们将进入正题，介绍和分析毕设项目的整体系统设计。\par
+
+\section{系统设计}
+上一章介绍了io\underline{~}uring，协程和异步编程框架的基本概念。在目前开源软件生态中，
+缺乏同时兼顾性能和易用性的开源异步编程框架。因此我们将基于io\underline{~}uring和协程，
+分别使用Rust和C++语言设计并实现一款简单易用的高性能异步编程框架，
+在贡献开源生态的同时，验证异步I/O和协程的可行性与高效性。\par
+
+\subsection{功能需求}
+
+\begin{enumerate}
+  \item 底层封装。对io\underline{~}uring和协程进行封装，在不向上暴露两者细节的同时，提供高性能接口；
+  \item 接口易用。向上提供用于构建网络应用和存储应用所需的简单易用的功能接口，例如TCP协议的连接；
+  \item 安全。框架需确保稳定可靠，不允许出现内存泄漏，死锁等问题；
+  \item 高性能。框架需要比目前主流的一些异步编程框架具备更高的性能。
+\end{enumerate}
+
+\subsection{系统总体设计}
+
+我们将整个系统分为两个层次：基础层和应用层。
+基础层负责直接管理io\underline{~}uring和协程逻辑，而应用层负责管理文件，网络I/O等面向应用开发的逻辑。
+从满足需求方面考虑，基础层负责底层封装，应用层负责提供接口。\par
+
+我们采用分模块的系统设计方法，将整个基础层架构划分为以下几个模块：
+
+\begin{enumerate}
+  \item I/O操作基本单元\textbf{Op}；
+  \item io\underline{~}uring对象\textbf{IoUring}；
+  \item 异步任务\textbf{Task};
+  \item 任务调度器\textbf{Scheduler};
+  \item 事件驱动模块\textbf{Reactor}；
+  \item 任务执行模块\textbf{Executor}；
+\end{enumerate}
+
+它们之间的关系如\rfig{system-design}：\par
+
+\cfig{system-design}{0.9}{基础层架构图}
+
+每个模块之间的关系是独立解耦的，它们各自完成自己负责的工作，
+而互不干扰。像这样模块解耦的设计既能带来代码编写和维护上的便利，
+同时也能增强整个系统的稳定性。\par
+
+此外，将应用层架构分为文件操作和网络操作两个模块。
+这两个模块的主要功能是生成应用相关的异步任务，比如TCP连接任务。
+向上层应用提供简单易用的功能接口，则主要是这两个模块的工作。\par
+
+在上述的模块当中，只有文件，网络操作模块为公开给外部的模块。
+基于以上设计，我们可以看到io\underline{~}uring和协程的概念被封装到了
+Op，IoUring，Executor等私有模块当中，向外暴露的只有文件，网络操作等与
+应用相关的模块及其接口，从而实现我们的“底层封装”需求。\par
+
+\subsection{功能模块设计}
+本节将对系统设计中的各个模块进行详细介绍。\par
+
+\subsubsection{Op模块与Op派生子类}
+
+Op在本系统设计中指代I/O相关操作的基本单元，从面向对象角度考虑它可以被理解为所有
+I/O操作的\textbf{基类}。\par
+
+在Linux平台上，存在非常多的I/O操作，比如read(2)，write(2)，recv(2)等。
+如果不对它们进行统一抽象，在代码实现的时候将需要编写许多重复代码。\par
+
+而对于异步I/O接口io\underline{~}uring来说，不同I/O操作之间的区别仅仅在于
+它们往请求队列中提交的请求（SQE）中的数据不同。因此，采用面向对象的程序设计思想，
+我们定义一个名为Op的基类，基于这个基类可以派生出各种子类，
+这些子类则对应于Linux平台上的各种I/O操作。将这些子类成为\textbf{Op派生子类}\par
+
+既然Op模块是一个基类，则其必存在父类方法，它们包括：
+
+\begin{enumerate}
+  \item create\underline{~}sqe：创建I/O请求SQE；
+  \item submit：往io\underline{~}uring实例的提交队列中提交SQE。
+\end{enumerate}
+
+可以通过重写create\underline{~}sqe方法派生子类。\par
+
+同时，作为功能模块，Op需要实现的功能包括：
+
+\begin{enumerate}
+  \item 在提交SQE后挂起当前协程；
+  \item 在协程恢复后获得I/O操作的返回值。
+\end{enumerate}
+
+上述两点功能是Op模块参与构建异步编程框架的基础。\par
+
+\subsubsection{IoUring模块}
+
+IoUring在本系统设计中指代io\underline{~}uring的实例，
+从面向对象的角度考虑它可以被理解为一个提供io\underline{~}uring相关操作接口的类。
+比如Op需要往提交队列中提交请求，这时候它需要调用IoUring中的方法。\par
+
+IoUring模块需要实现的功能包括：
+
+\begin{enumerate}
+  \item 提供初始化io\underline{~}uring实例的接口；
+  \item 提供提交I/O请求的接口；
+  \item 提供返回I/O完成事件CQE的接口。
+\end{enumerate}
+
+上述接口（1）用于初始化io\underline{~}uring环境。io\underline{~}uring本质上是一块用户态和
+内核态共享的内存空间，这个内存空间中维护了两个环形队列。因此在使用io\underline{~}uring接口
+之前需要先完成申请内存空间，映射这块内存空间到用户和内核等初始化工作。\par
+
+上述接口（2）用于提交I/O请求。io\underline{~}uring中的I/O请求以SQE数据结构表示，
+提交I/O请求的操作是将SQE推入到提交队列尾部。该接口封装了提交动作的细节。\par
+
+上述接口（3）用于收割I/O完成事件。用户和内核分别是I/O完成事件的消费者和生产者。
+当有I/O操作完成时，内核会将对应的CQE数据结构推入到完成队列尾部。
+用户可通过从完成队列头部弹出CQE数据结构收割I/O完成事件。该接口封装了收割动作的细节。\par
+
+\subsubsection{Task模块}
+
+Task在本系统设计中指代异步任务，或者协程，是Scheduler模块调度和Executor模块执行的基本单位。
+在Rust语言中，Task通常为一个Future；在C++语言中，Task通常为一个协程。
+在设计环节中，我们将统一两者的概念，使其成为一个独立的功能模块。\par
+
+Task模块具有以下特点：
+\begin{enumerate}
+  \item 由一个或多个Op派生子对象有序组成；
+  \item 每个Op派生子对象对应一个\textbf{切换点}，切换点可能存在两种状态：
+    \begin{enumerate}
+      \item 等待数据状态；
+      \item 就绪状态。
+    \end{enumerate}
+  \item 支持暂时挂起和恢复；
+  \item 当恢复时，从上次挂起的地方继续运行。
+\end{enumerate}
+
+举个例子，假设Open和Read均为Op的派生子类，
+分别表示打开文件和读文件的I/O操作，那么一个读文件的Task就可以表示为\rfig{read-file}：
+
+\cfig{read-file}{0.4}{读文件Task}
+
+Task模块需要实现的功能包括：
+
+\begin{enumerate}
+  \item 提供创建Task的接口；
+  \item 提供执行Task的接口；
+  \item 提供挂起Task的接口；
+  \item 提供获得Task返回值的接口。
+\end{enumerate}
+
+上述接口（1）用于创建一个Task实例，它在Rust语言中表示异步任务，在C++语言中表示协程。
+一个Task实例可以被放入到Scheduler模块中进行调度，也可以在Executor模块中被执行。\par
+
+上述接口（2）和（3）提供了任务的执行和挂起功能，它们被用于Executor模块执行Task实例。
+Executor模块通过调用接口（2）来运行Task实例，当运行到切换点时，Executor模块会调用接口（3）来挂起
+Task实例。特别需要说明的是，Task实例的恢复操作复用接口（2）：当一个Task被挂起后又重新被执行时，
+等同于被该Task被恢复了。\par
+
+上述接口（4）提供了在Task运行结束时获得其中返回值的能力。这个能力往往通过编译器提供，
+在Executor模块中使用。\par
+
+\subsubsection{Scheduler模块}
+
+Scheduler在本系统设计中指代任务调度器，
+主要负责内置调度算法，对异步任务或协程，也就是Task实例进行调度管理。
+在后期性能优化中，调度算法也是关注点之一。\par
+
+Scheduler模块需要实现的功能包括：
+
+\begin{enumerate}
+  \item 提供添加Task实例的接口；
+  \item 提供弹出Task实例的接口，该接口以CQE作为参数。
+\end{enumerate}
+
+上述接口（1）用于添加Task实例；接口（2）用于Reactor模块从IoUring模块获得CQE后，
+以CQE为参数从调度器中弹出Task实例。\par
+
+Scheduler模块类似于线程池中的调度模块，只不过线程池中调度的是线程，
+该模块中调度的是异步任务或协程。\par
+
+\subsubsection{Reactor模块}
+
+Reactor模块的设计动机来源于事件驱动的概念。事件驱动是指在持续事物管理过程中，
+跟随当前时间点上出现的事件，进而调用资源，解决问题的的一种机制。
+在io\underline{~}uring的语境中，需要一个模块不断检查完成队列，
+来获得事件驱动源。\par
+
+Reactor在本系统设计中指代事件驱动器，
+主要负责轮询io\underline{~}uring实例中的完成队列，收割CQE，
+并根据CQE唤醒对应的Task实例。\par
+
+Reactor模块需要实现的功能是：轮询调用IoUring模块的接口（3），
+不断获取I/O完成事件CQE，并以CQE为参数调用Scheduler模块的接口（2），
+弹出Task实例，将其送到Executor模块中执行。\par
+
+\subsubsection{Executor模块}
+
+Executor在本系统设计中指代任务执行器，
+主要负责接收异步任务或协程，也就是Task实例进行执行，恢复或挂起操作。\par
+
+Executor模块需要实现的功能包括：
+
+\begin{enumerate}
+  \item 执行Task实例，直到切换点（await/co\underline{~}await）；
+  \item 切换点可能有两种状态：
+    \begin{enumerate}
+      \item 等待数据状态，这时候执行器需要挂起当前Task实例，并让出CPU控制权；
+      \item 就绪状态，这时候执行器需要继续运行当前Task实例。
+    \end{enumerate}
+\end{enumerate}
+
+从本质上讲，整个系统框架就是在管理多个Task实例的执行-挂起-唤醒操作，
+Executor模块主要负责这里的执行和挂起操作。\par
+
+\subsubsection{文件，网络操作模块}
+
+上面提到Task实例由一个或多个Op的派生子对象组成，而Op派生子类对应于Linux平台上的I/O操作。
+Linux平台上的诸多I/O操作大体可以分为两部分：文件和网络。
+文件操作包括打开文件（open(2)），读文件（read(2)）和写文件（write(2)）等等；
+网络操作包括监听（listen(2)），连接（accept(2)）和接收字节流（recv(2)）等等。
+这些I/O操作面向应用，因此选择将生成Op派生子对象的逻辑在应用层里面沉淀。\par
+
+在应用层中的文件，网络操作模块主要负责生成各种Op派生子对象，
+用于构建异步任务或协程，并且通过这种方式，向上层应用提供简单易用的异步接口。\par
+
+Linux上存在数量繁多的I/O操作，这里主要列出需要支持的几个常用接口：
+
+\begin{generaltab}{异步文件/网络接口}{tbl:hmm}
+  \begin{tabular}{c|ccc}
+    \toprule
+    文件 & 网络 \\
+    \midrule
+    打开文件 & 监听地址和端口 \\
+    读文件 & 处理TCP连接 \\
+    写文件 & 接收字节流 \\
+    关闭文件 & 发送字节流 \\
+    ... & ... \\
+    \bottomrule
+  \end{tabular}
+\end{generaltab}
+
+\subsection{设计中考虑的制约因素}
+
+\textbf{社会因素考量}：在本文提出的异步编程框架的设计方案中，将提供简单易用的API列为需要实现的
+功能需求点之一，降低了企业或者个人进行技术升级的人力成本，有利于社会生产力的提高。\par
+
+\textbf{安全因素考量}：我们的方案充分考量了安全因素，在我们的方案中，不存在涉及网络安全相关的
+因素，保证了实现的框架的安全。\par
+
+\textbf{法律风险规避}：方案的设计和实现过程均进行了法律上的考量，项目依赖的软件库，开发过程使用的
+开发工具和测试环节使用的测试工具，均为正版，免费版本和遵守开源协议的开源版本，
+规避了侵权相关的法律问题。\par
+
+\textbf{文化风险规避}：在方案设计和项目实现过程中，保证了对代码和文档的审查，
+代码和文档中不存在不当言论，不存在暴力，低俗，反动，种族歧视等性质的词汇或语句，
+确保整个项目不会产生文化风险。\par
+
+\subsection{成本估算}
+
+本毕设的成本估算选用Putnam模型。\par
+
+在整个毕设开发过程中，编写源代码4997行，持续开发时间为0.4年，技术状态为好，
+估算到开发工作量为9.520。\par
+
+\subsection{本章小结}
+
+本章我们首先从需求入手，首先讨论了异步编程框架设计中的功能需求；
+接着从整体介绍了系统的分层设计和架构设计；随后详细介绍了各功能模块的职责和需要实现的功能或
+需要提供的接口；然后分析了设计中考虑的制约因素；最后估算了开发过程所花的成本。\par
+
+\section{系统实现}
+
+在上一章中进行了对异步编程框架的需求分析和整体系统设计，
+本章将在对Rust/C++语言中的协程进行详细分析的基础上，
+介绍如何通过Rust语言和C++语言进行系统功能实现，并对比两者之间的区别。\par
+
+\subsection{分析Rust语言中的协程}
 早期的Rust语言曾支持一个被称为\textbf{绿色线程}的有栈协程实现，但在0.7版本之后便废弃了。
 原因是如果Rust要支持绿色线程这样的机制，语言本身需要在运行时层面引入非常多的依赖，
 而这种依赖对于不使用绿色线程的代码来说单纯是一种负担。Rust的目标是构建一门零成本抽象的语言，
@@ -747,22 +982,6 @@ async/await的主要作用是可以通过编译器生成Future：
   \item await关键字的作用是调用子Future中的poll方法，并将结果（Ready/Pending）传递给大Future；
 \end{itemize}
 
-举个例子：
-\begin{lstlisting}
-  struct A {}
-  struct B {}
-  impl Future for struct A {...}
-  impl Future for struct B {...}
-
-  async foo() {
-    let a = A.await;
-    let b = b.await;
-  }
-\end{lstlisting}
-
-经过async关键字修饰后，foo函数的返回值就变成了一个大Future（假设为Foo），它由两个子Future A，B组成，
-它们之间的组合关系是A->B->Foo。编译器通过生成状态机代码来实现这种组合关系。\par
-
 \subsubsection{执行器Executor}
 协程被称为用户态线程，意味着需要有用户态的调度器来调度协程。在Rust中，同样需要一种协作式的调度管理机制，
 在用户态管理和运行异步任务。负责这个工作的组件，被称为Executor（执行器）。\par
@@ -801,7 +1020,7 @@ Reactor中，这样Reacotr才能够在事件来临时唤醒相应的Future。\pa
 
 \cfig{rust-async}{0.9}{Rust异步架构}
 
-\subsection{C++语言中的协程}
+\subsection{分析C++语言中的协程}
 在C++ 20之前，C++语言本身不支持协程。开发者只能通过第三方库来获得协程支持，比如微信团队开源的有栈协程库libco。\par
 
 C++ 20推出了无栈协程标准，标准里提供了co\underline{~}await等关键字
@@ -867,247 +1086,6 @@ co\underline{~}return 后面跟的表达式的值会作为参数传递给Promise
     \bottomrule
   \end{tabular}
 \end{generaltab}
-
-\subsection{异步编程框架}
-
-经过上面的介绍，我们对异步I/O和Rust/C++协程有了初步的了解。接下来将进入本文的正题：
-设计和实现高性能的异步编程框架。\par
-
-什么是异步编程框架？前面介绍的无论是异步I/O还是协程的概念，都是比较偏系统底层的，
-要想正确理解和使用它们，需要开发者具备完整的操作系统和编译原理的知识体系。
-然而，许多应用开发者并不具备这样的能力，他们更多关注数据结构，算法和业务逻辑。
-在现代软件开发领域中，分层设计已成共识，因此要想一般应用开发者也能比较轻松地利用到异步I/O和协程的高性能，
-需要一个封装了异步I/O和协程概念，并向上层应用提供简单易用API的底层框架，这就是异步编程框架。\par
-
-\subsection{本章小结}
-
-本章我们首先从异步I/O入手，讨论了异步I/O与同步I/O的区别和性能优势；接着介绍了Linux平台上新增的io\underline{~}uring
-异步接口；然后以线程切换开销大为切入点，引出协程并介绍了协程在性能上的优势，同时对比分析了线程与协程；
-随后介绍了协程的分类和它们之间的区别；此外还详细介绍了Rust/C++中的协程实现；最后说明了异步编程框架的概念。\par
-
-下一章我们将进入正题，介绍和分析毕设项目的整体系统设计。\par
-
-\section{系统设计}
-上一章介绍了io\underline{~}uring，协程和异步编程框架的基本概念。在目前开源软件生态中，
-缺乏同时兼顾性能和易用性的开源异步编程框架。因此我们将基于io\underline{~}uring和协程，
-分别使用Rust和C++语言设计并实现一款简单易用的高性能异步编程框架，
-在贡献开源生态的同时，验证异步I/O和协程的可行性与高效性。\par
-
-\subsection{功能需求}
-
-\begin{enumerate}
-  \item 底层封装。对io\underline{~}uring和协程进行封装，在不向上暴露两者细节的同时，提供高性能接口；
-  \item 接口易用。向上提供用于构建网络应用和存储应用所需的简单易用的功能接口，例如TCP协议的连接；
-  \item 安全。框架需确保稳定可靠，不允许出现内存泄漏，死锁等问题；
-  \item 高性能。框架需要比目前主流的一些异步编程框架具备更高的性能。
-\end{enumerate}
-
-\subsection{系统总体设计}
-
-我们采用分模块的系统设计方法，将整个异步编程框架划分为以下几个模块：
-
-\begin{itemize}
-  \item I/O操作基本单元\textbf{Op}；
-  \item io\underline{~}uring对象\textbf{IoUring}；
-  \item 异步任务\textbf{Task};
-  \item 任务调度器\textbf{Scheduler};
-  \item 事件驱动模块\textbf{Reactor}；
-  \item 任务执行模块\textbf{Executor}；
-\end{itemize}
-
-它们之间的关系如\rfig{system-design}：\par
-
-\cfig{system-design}{0.9}{系统设计架构图}
-
-每个模块之间的关系应是独立解耦的，它们各自完成自己负责的工作，
-而互不干扰。模块解耦的设计既能带来代码编写和维护上的便利，
-同时也能增强整个系统的稳定性。\par
-
-此外，从应用视角来看，可以增加两个功能模块：
-
-\begin{itemize}
-  \item 文件操作模块；
-  \item 网络操作模块。
-\end{itemize}
-
-这两个模块的主要功能是生成应用相关的异步任务，比如TCP连接任务。
-向上层应用提供简单易用的功能接口，则主要是这两个模块的工作。\par
-
-在上述的模块当中，只有文件，网络操作模块为公开给外部的模块。
-基于以上设计，我们可以看到io\underline{~}uring和协程的概念被封装到了
-Op，IoUring，Executor等私有模块当中，向外暴露的只有文件，网络操作等与
-应用相关的模块及其接口，从而实现我们的“底层封装”需求。\par
-
-\subsection{功能模块设计}
-本节将对系统设计中的各个模块进行详细介绍。\par
-
-\subsubsection{Op模块}
-
-Op在本系统设计中指代I/O相关操作的基本单元，从面向对象角度考虑它可以被理解为所有
-I/O操作的\textbf{基类}。\par
-
-在Linux平台上，存在非常多的I/O操作，比如read(2)，write(2)，recv(2)等。
-如果不对它们进行统一抽象，在代码实现的时候将需要编写许多重复代码。\par
-
-而对于异步I/O接口io\underline{~}uring来说，不同I/O操作之间的区别仅仅在于
-它们往请求队列中提交的请求（SQE）中的数据不同。因此，采用面向对象的程序设计思想，
-我们定义一个名为Op的基类，基于这个基类可以派生出各种子类，
-这些子类则对应于Linux平台上的各种I/O操作。\par
-
-Op模块需要实现的功能包括：
-
-\begin{enumerate}
-  \item 创建I/O请求SQE；
-  \item 往io\underline{~}uring的提交队列中提交SQE；
-  \item 在提交SQE后挂起当前协程；
-  \item 在协程恢复后获得I/O操作的返回值。
-\end{enumerate}
-
-可以通过重写上述（1）中的功能达到派生子类的效果。\par
-
-\subsubsection{IoUring模块}
-
-IoUring在本系统设计中指代io\underline{~}uring的实例，
-从面向对象的角度考虑它可以被理解为一个提供io\underline{~}uring相关操作接口的类。
-比如Op需要往提交队列中提交请求，这时候它需要调用IoUring中的方法。\par
-
-IoUring模块需要实现的功能包括：
-
-\begin{enumerate}
-  \item 提供初始化io\underline{~}uring实例的接口；
-  \item 提供提交I/O请求的接口；
-  \item 提供返回I/O完成事件CQE的接口。
-\end{enumerate}
-
-上述接口（1）用于初始化io\underline{~}uring环境，接口（2）用于Op模块提交SQE，
-接口（3）用于Reactor模块收割CQE。\par
-
-\subsubsection{Task模块}
-
-Task在本系统设计中指代异步任务，或者协程，是Scheduler模块调度和Executor模块执行的基本单位。
-在Rust语言中，Task通常为一个Future；在C++语言中，Task通常为一个协程。\par
-
-Task可以由一个或多个Op的派生子对象组成。举个例子，假设Open和Read均为Op的派生子类，
-分别表示打开文件和读文件的I/O操作，那么一个读文件的Task就可以表示为\rfig{read-file}：
-
-\cfig{read-file}{0.4}{读文件Task}
-
-Task模块需要实现的功能包括：
-
-\begin{enumerate}
-  \item 提供创建Task的接口；
-  \item 提供挂起Task的接口；
-  \item 提供恢复Task的接口；
-  \item 提供获得Task返回值的接口。
-\end{enumerate}
-
-上述接口（1）用于创建异步任务或协程；接口（2）（3）分别用于Executor模块挂起和恢复异步任务或协程；
-接口（4）用于获取一个异步任务完成时的返回值。\par
-
-\subsubsection{Scheduler模块}
-
-Scheduler在本系统设计中指代任务调度器，
-主要负责内置调度算法，对异步任务或协程进行调度管理。
-在后期性能优化中，调度算法也是关注点之一。\par
-
-Scheduler模块需要实现的功能包括：
-
-\begin{enumerate}
-  \item 提供添加任务的接口；
-  \item 提供弹出任务的接口，该接口以CQE作为参数。
-\end{enumerate}
-
-上述接口（1）用于添加异步任务或协程；接口（2）用于Reactor模块从IoUring模块获得CQE后，
-以CQE为参数从调度器中弹出异步任务或协程。\par
-
-\subsubsection{Reactor模块}
-
-Reactor在本系统设计中指代事件驱动器，
-主要负责轮询io\underline{~}uring实例中的完成队列，收割CQE，
-并根据CQE唤醒对应的异步任务或协程。\par
-
-Reactor模块需要实现的功能是：轮询调用IoUring模块的接口（3），
-不断获取I/O完成事件CQE，并以CQE为参数调用Scheduler模块的接口（2），
-弹出异步任务或协程，将其送到Executor模块中执行。\par
-
-\subsubsection{Executor模块}
-
-Executor在本系统设计中指代任务执行器，
-主要负责接收异步任务或协程进行执行，恢复或挂起操作。\par
-
-Executor模块需要实现的功能包括：
-
-\begin{enumerate}
-  \item 执行或恢复执行异步任务或协程，直到切换点（await/co\underline{~}await）；
-  \item 若运行到切换点处时返回Pending或suspend，挂起当前异步任务或协程。
-\end{enumerate}
-
-上述接口（2）往往通过将异步任务或协程推入Scheduler模块实现挂起操作。\par
-
-\subsubsection{文件，网络操作模块}
-
-上面提到Task由一个或多个Op的派生子对象组成，而Op派生子类对应于Linux平台上的I/O操作。
-Linux平台上的诸多I/O操作大体可以分为两部分：文件和网络。
-文件操作包括打开文件（open(2)），读文件（read(2)）和写文件（write(2)）等等；
-网络操作包括监听（listen(2)），连接（accept(2)）和接收字节流（recv(2)）等等。\par
-
-本系统设计中的文件，网络操作模块主要负责生成各种Op派生子对象，
-用于构建异步任务或协程，并且通过这种方式，向上层应用提供简单易用的异步接口。\par
-
-文件，网络操作分别需要提供的接口如下：
-
-\begin{generaltab}{异步文件/网络接口}{tbl:hmm}
-  \begin{tabular}{c|ccc}
-    \toprule
-    文件 & 网络 \\
-    \midrule
-    打开文件 & 监听地址和端口 \\
-    读文件 & 处理TCP连接 \\
-    写文件 & 接收字节流 \\
-    关闭文件 & 发送字节流 \\
-    ... & ... \\
-    \bottomrule
-  \end{tabular}
-\end{generaltab}
-
-我们可以说文件，网络操作模块为应用层模块。\par
-
-\subsection{设计中考虑的制约因素}
-
-\textbf{社会因素考量}：在本文提出的异步编程框架的设计方案中，将提供简单易用的API列为需要实现的
-功能需求点之一，降低了企业或者个人进行技术升级的人力成本，有利于社会生产力的提高。\par
-
-\textbf{安全因素考量}：我们的方案充分考量了安全因素，在我们的方案中，不存在涉及网络安全相关的
-因素，保证了实现的框架的安全。\par
-
-\textbf{法律风险规避}：方案的设计和实现过程均进行了法律上的考量，项目依赖的软件库，开发过程使用的
-开发工具和测试环节使用的测试工具，均为正版，免费版本和遵守开源协议的开源版本，
-规避了侵权相关的法律问题。\par
-
-\textbf{文化风险规避}：在方案设计和项目实现过程中，保证了对代码和文档的审查，
-代码和文档中不存在不当言论，不存在暴力，低俗，反动，种族歧视等性质的词汇或语句，
-确保整个项目不会产生文化风险。\par
-
-\subsection{成本估算}
-
-本毕设的成本估算选用Putnam模型。\par
-
-在整个毕设开发过程中，编写源代码4997行，持续开发时间为0.4年，技术状态为好，
-估算到开发工作量为9.520。\par
-
-\subsection{本章小结}
-
-本章我们首先从需求入手，首先讨论了异步编程框架设计中的功能需求；
-接着从整体介绍了系统的架构设计和该设计如何满足需求；随后详细介绍了各功能模块的职责和需要实现的功能或
-需要提供的接口；然后分析了设计中考虑的制约因素；最后估算了开发过程所花的成本。\par
-
-\section{系统实现}
-
-在上一章中我们进行了对异步编程框架的需求分析和整体系统设计，
-本章将会分模块地详细介绍系统的具体实现。\par
-
-在本毕设中，我们分别通过Rust语言和C++语言进行了系统实现，
-完成了两套异步编程框架，分别名为\textbf{Emma}（Rust）和\textbf{Kuro}（C++）。\par
 
 \subsection{Op模块实现}
 \subsubsection{Rust中的实现}
@@ -1203,8 +1181,8 @@ io-uring是一个对io\underline{~}uring相关底层接口进行封装的Rust第
 
 \begin{enumerate}
   \item 使用async关键字创建Task；
+  \item 通过对Task调用Future接口中的poll方法来执行Task；
   \item 使用await关键字挂起Task；
-  \item 通过对Task调用Future接口中的poll方法来恢复Task；
   \item Task运行结束后从Future接口中的poll方法的返回值获取整个Task的返回值。
 \end{enumerate}
 
@@ -1227,8 +1205,8 @@ io-uring是一个对io\underline{~}uring相关底层接口进行封装的Rust第
     \end{itemize}
   \item 为Task<T>实现Promise接口后，返回值为Task<T>的函数均被作为协程看待，
     因此调用此类函数即可创建Task；
+  \item 通过和函数调用的方式来执行Task；
   \item 在返回值为Task<T>的函数中使用co\underline{~}await关键字来挂起Task；
-  \item 通过调用协程句柄的resume方法来恢复Task；
   \item 当协程运行到co\underline{~}return关键字处时，其后面跟的值会被作为参数调用Promise接口
     中的方法return\underline{~}value，因此该值会被保存在Task<T>对象中。
     当协程运行结束后，可以从Task<T>对象中获取返回值。
@@ -1339,38 +1317,6 @@ CPU：Intel(R) Xeon(R) Gold 5117 CPU @ 2.00GHz，56逻辑核，2物理核\par
 网卡：Ethernet controller: Intel Corporation Ethernet Connection X722 for 10GbE SFP+ (rev 09)\par
 
 操作系统：Linux ubuntu85 5.13.0-40-generic \#45-Ubuntu SMP Tue Mar 29 14:48:14 UTC 2022 x86\underline{~}64 x86\underline{~}64 x86\underline{~}64 GNU/Linux\par
-
-% \subsection{功能测试}
-% 功能测试主要注重于异步编程框架的功能实现是否正确。由于本毕设实现的框架提供的外部接口较多，
-% 考虑到篇幅受限，因此重点选择较为常用的一些接口进行功能测试。\par
-%
-% 从应用视角将功能测试分为文件部分和网络部分。\par
-%
-% \subsubsection{文件功能测试}
-% 文件部分主要对以下接口进行功能测试：
-%
-% \begin{enumerate}
-%   \item 打开文件；
-%   \item 读文件；
-%   \item 写文件。
-% \end{enumerate}
-%
-% 我们可以通过使用实现完成的异步编程框架Emma和Kuro编写一个复制文件的应用，即可完成以上接口的功能测试。\par
-%
-% \subsubsection{网络功能测试}
-%
-% 网络部分主要对以下接口进行功能测试：
-%
-% \begin{enumerate}
-%   \item 监听指定的IP地址和端口；
-%   \item 接受TCP连接；
-%   \item 接收字节流；
-%   \item 发送字节流。
-% \end{enumerate}
-%
-% 我们可以通过使用完成的异步编程框架Emma和Kuro编写一个简易HTTP服务器，即可完成以上接口的功能测试。\par
-%
-% \subsubsection{分析}
 
 \subsection{性能测试}
 
