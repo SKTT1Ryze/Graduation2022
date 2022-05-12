@@ -1,0 +1,24 @@
+\begin{tikzpicture}
+
+\draw (0,0) rectangle (4,2);
+
+\draw (0.25,0.25) rectangle (2,0.75);
+\draw (0.25,1.25) rectangle (2,1.75);
+
+\draw (0.25,2.25) rectangle (0.75,2.75);
+\draw (1,2.25) rectangle (1.5,2.75);
+\draw (1.75,2.25) rectangle (2.25,2.75);
+\draw (2.5,2.25) rectangle (3,2.75);
+
+\draw [->] (1.25,0.75)--(1.25,1.25);
+\draw [->] (0.75,0.75)--(0.75,1.25);
+
+\node at (3,1) {异步编程框架};
+\node at (1,0.5) {基础层};
+\node at (1,1.5) {应用层};
+\node at (0.5,2.5) {App};
+\node at (1.25,2.5) {App};
+\node at (2,2.5) {App};
+\node at (2.75,2.5) {App};
+
+\end{tikzpicture}
