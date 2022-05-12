@@ -116,18 +116,20 @@
 
 在大数据时代，随着互联网用户体量的高速增长，数据中心面对数量越来越庞大，频度越来越高
 的数据访问，对更为高效的数据输入输出（下文简称I/O）技术方案的需求也日益增长。
-在此背景下，传统服务端开发中使用的同步数据I/O模式由于线程阻塞问题逐渐在性能考验上力不从心，
-因此工业界和学术界正在探索和研究更为高效的异步I/O方案，希望以此来提高系统的整体性能。\par
-
+在此背景下，传统服务端开发中使用的同步数据I/O模式由于线程阻塞问题逐渐在性能测试上达到瓶颈，
+因此工业界和学术界正在探索和研究更为高效的异步I/O方案，希望以此来提高系统的整体性能。
 同时，在系统并发编程领域，传统的多线程编程模式也慢慢展现出了它的弊端。近年来存储设备的性能
 不断提高，现今某些高速存储设备进行一次I/O操作的开销已经能和一次线程切换的开销不分伯仲，
 这意味着每进行一次线程切换系统就浪费一次I/O的时间。
 面对线程切换开销重的现状，现代许多编程语言均提出了协程的概念，旨在提供一个更轻量，高效的并发编程模式。\par
 
-本毕业设计以异步I/O和协程为基点，设计和实现一款高性能的异步编程框架。
-基于Linux io\underline{~}uring为底层异步I/O接口和使用无栈协程作为并发编程模式，
-该框架具备高性能，低资源占用和易于编程的特点。
-同时，对此框架进行性能测试，实验结果验证了异步I/O模式和协程能实实在在地对系统性能产生积极的影响。
+  本课题基于Linux异步I/O接口io\underline{~}uring和协程设计并分别使用C++和Rust语言实现了两款高性能的异步编程框架\textbf{Kuro}和\textbf{Emma}。
+同时，对此框架进行性能测试，实验结果验证了异步I/O模式和协程能实实在在地对系统性能产生积极的影响。\par
+
+Kuro和Emma具备提供简单易用接口的能力，
+使得上层应用开发者不需要了解异步I/O和协程的底层细节即可充分利用到两者的性能优势。
+此外，在与当前开源生态中主流的几款异步编程框架的性能对比测试结果中发现，
+Kuro和Emma具备顶尖的高效性能。\par
 
 \end{cnabstract}
 
@@ -139,8 +141,7 @@ data input and output technical solutions is also increasing. In this context, t
 data I/O mode used in traditional server development is gradually unable to perform performance
 tests due to thread blocking problems.Therefore, the industry and academia are exploring and
 researching more efficient asynchronous I/O solutions, hoping to improve the overall performance
-of the system.\par
-
+of the system.
 At the same time, in the field of system concurrent programming, the traditional multi-threaded
 programming mode has gradually shown its drawbacks.In recent years, the performance of storage
 devices has been continuously improved. Today, the overhead of one I/O operaion on some high-speed
@@ -149,13 +150,18 @@ the system is switched between threads, an I/O time is wasted. Faced with the cu
 of heavy thread switching overhead, many modern programming languages have proposed the concept
 of coroutines, aiming to provide a lighter and more efficient concurrent programming model.\par
 
-Based on asynchronous I/O and coroutines, this graduation project designs and implements a
-high-performance asynchronous programming framwork. Based on Linux io\underline{~}uring as
-the underlying asynchronous I/O interface and the use of stackless coroutines as a concurrent
-programming mode, the framework has the characteristics of high performance, low resource consumption
-and easy programming. At the same time, the performance of this framework is tested, and the
-result of the experiment verify that asynchronous I/O modes and coroutines can actually have a
-positive impact on system performance.\par
+Based on the Linux asynchronous I/O interface io\underline{~}uring and coroutine design,
+two high-performance asynchronous programming frameworks \textbf{Kuro} and \textbf{Emma} are implemented using C++ and Rust languages respectively.
+At the same time, the performance of this framework is tested,
+and the experimental results verify that asynchronous I/O modes and coroutines can actually have a positive impact on system performance.\par
+
+Kuro and Emma
+has the ability to provide a simple and easy-to-use interface,
+so that upper-layer application developers do not need to understand the underlying details of
+asynchronous I/O and coroutines to take full advantage of the performance advantages of both.
+In addition, through the performance comparison test with several mainstream asynchronous programming frameworks in the current open source ecosystem,
+it is proved that Kuro and Emma has top efficient performance.\par
+
 
 \end{enabstract}
 
