@@ -1,0 +1,34 @@
+\begin{tikzpicture}
+
+\node[box] (0) at (0,0) {Task};
+
+\node[box] (1) at (2,0) {执行};
+
+\node[box] (2) at (4,0) {切换点};
+
+\node (3) at (6,0) {检查状态};
+
+\node at (7,0.25) {等待};
+\node at (7,-1) {就绪};
+
+\node[box] (4) at (8,2) {挂起};
+\node at(5,1) {唤醒};
+
+
+\node (5) at (8,-2) {是否最后一个切换点};
+
+\node at (9,-1) {是};
+\node at (5,-1) {否};
+
+\node[box] (6) at (10,0) {完成};
+
+\draw[->] (0)--(1);
+\draw[->] (1)--(2);
+\draw[->] (2)--(3);
+\draw[->] (3)--(4);
+\draw[->] (3)--(5);
+\draw[->] (5)--(6);
+\draw[->] (5)--(1);
+\draw[->] (4)--(1);
+
+\end{tikzpicture}
