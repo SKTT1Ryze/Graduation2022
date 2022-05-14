@@ -1,6 +1,6 @@
 \documentclass[supercite]{HustGraduPaper}
 
-\title{高性能异步编程框架的设计与实现}
+\title{基于io\underline{~}uring和协程的高性能异步编程框架设计与实现}
 \author{车春池}
 \school{计算机科学与技术}
 \classnum{校际交流1801}
@@ -119,17 +119,20 @@
 在此背景下，传统服务端开发中使用的同步数据I/O模式由于线程阻塞问题逐渐在性能测试上达到瓶颈，
 因此工业界和学术界正在探索和研究更为高效的异步I/O方案，希望以此来提高系统的整体性能。
 同时，在系统并发编程领域，传统的多线程编程模式也慢慢展现出了它的弊端。近年来存储设备的性能
-不断提高，现今某些高速存储设备进行一次I/O操作的开销已经能和一次线程切换的开销不分伯仲，
+不断提高，某些高速存储设备进行一次I/O操作的开销已经能和一次线程切换的开销不分伯仲，
 这意味着每进行一次线程切换系统就浪费一次I/O的时间。
 面对线程切换开销重的现状，现代许多编程语言均提出了协程的概念，旨在提供一个更轻量，高效的并发编程模式。\par
 
-  本课题基于Linux异步I/O接口io\underline{~}uring和协程设计并分别使用C++和Rust语言实现了两款高性能的异步编程框架\textbf{Kuro}和\textbf{Emma}。
-同时，对此框架进行性能测试，实验结果验证了异步I/O模式和协程能实实在在地对系统性能产生积极的影响。\par
+基于异步I/O和协程设计并分别使用C++和Rust语言实现了两款高性能的异步编程框架\textbf{Kuro}和\textbf{Emma}。
+Kuro和Emma框架底层使用了Linux平台上先进的io\underline{~}uring技术，并兼容C++和Rust语言的官方协程标准，
+相比传统的同步I/O和多线程编程模式，具有更轻量，更高性能的优势。\par
 
-Kuro和Emma具备提供简单易用接口的能力，
-使得上层应用开发者不需要了解异步I/O和协程的底层细节即可充分利用到两者的性能优势。
-此外，在与当前开源生态中主流的几款异步编程框架的性能对比测试结果中发现，
-Kuro和Emma具备顶尖的高效性能。\par
+在功能上，Kuro和Emma框架提供简单易用的接口，
+向上层应用开发者提供构建高性能存储和网络应用的能力。
+在性能上，Kuro和Emma框架和当前开源生态中主流的性能最高的异步编程框架相比，
+具备更高的性能。
+此外，通过对Kuro和Emma框架和传统的同步I/O与多线程编程模式进行性能对比测试，
+验证了异步I/O结合协程能提升高并发场景中服务器程序的执行效率。\par
 
 \end{cnabstract}
 
@@ -152,16 +155,16 @@ of coroutines, aiming to provide a lighter and more efficient concurrent program
 
 Based on the Linux asynchronous I/O interface io\underline{~}uring and coroutine design,
 two high-performance asynchronous programming frameworks \textbf{Kuro} and \textbf{Emma} are implemented using C++ and Rust languages respectively.
-At the same time, the performance of this framework is tested,
-and the experimental results verify that asynchronous I/O modes and coroutines can actually have a positive impact on system performance.\par
+The Kuro and Emma frameworks use the advanced io\underline{~}uring technology on the Linux platform at the bottom,
+and are compatible with the official coroutine standards of C++ and Rust languages.
+Compared with traditional synchronous I/O and multi-threaded programming models, they have lighter weight and higher performance advantages.\par
 
-Kuro and Emma
-has the ability to provide a simple and easy-to-use interface,
-so that upper-layer application developers do not need to understand the underlying details of
-asynchronous I/O and coroutines to take full advantage of the performance advantages of both.
-In addition, through the performance comparison test with several mainstream asynchronous programming frameworks in the current open source ecosystem,
-it is proved that Kuro and Emma has top efficient performance.\par
-
+Functionally, the Kuro and Emma frameworks provide easy-to-use interfaces and provide upper-layer application developers
+with the ability to build high-performance storage and network applications.
+In terms of performance, the Kuro and Emma frameworks have higher performance
+than the mainstream asynchronous programming frameworks with the highest performance in the current open source ecosystem.
+In addition, through the performance comparison test of Kuro and Emma frameworks and traditional synchronous I/O and multi-threaded programming modes,
+it is verified that asynchronous I/O combined with coroutines can improve the execution efficiency of server programs in high concurrency scenarios.\par
 
 \end{enabstract}
 
@@ -178,6 +181,8 @@ it is proved that Kuro and Emma has top efficient performance.\par
 最后对本课题的主要研究内容及工作意义作了具体说明。
 
 \subsection{课题背景}
+
+本节将从研究背景和趋势，面临的问题和挑战两个方面介绍课题的背景。\par
 
 \subsubsection{研究背景和趋势}
 \subsubsubsection{同步I/O与异步I/O}
@@ -199,7 +204,6 @@ Linux 平台上的I/O模型经历了几个发展阶段：阻塞，非阻塞\cite
 了足够强大的性能潜力。因此，基于io\underline{~}uring的学术研究和工程变革势在必行。\par
 
 \subsubsubsection{线程与协程}
-在介绍协程之前，先来分析一下协程产生的原因和要解决的问题。\par
 
 在传统Linux并发编程领域中，通常使用多线程作为并发模型的基础。操作系统内核为每个线程分配独立的栈空间，
 使得每个线程可以独立地并行执行，能成倍提高程序运行的效率。同时，每个线程可以占据独立的CPU核，
@@ -222,7 +226,6 @@ Linux 平台上的I/O模型经历了几个发展阶段：阻塞，非阻塞\cite
 这意味着：每进行一次线程间的切换，整个系统就浪费一次进行I/O操作的机会。\par
 
 因此为了解决线程间切换开销大的问题，\textbf{协程}（coroutine）的概念被提出来，它被称为\textbf{用户态线程}。
-
 协程一词最早出自于上个世纪的程序员马尔文·康威，关于协程的论文\cite{paper1}最早在
 1963年发表。协程可以被理解为是一个可以随时挂起和恢复运行的函数。它可以通过\textbf{yield}
 来让出当前CPU，然后运行其他协程；它也可以通过\textbf{resume}来恢复执行。当一个协程被恢复的时候，
@@ -241,8 +244,7 @@ Linux 平台上的I/O模型经历了几个发展阶段：阻塞，非阻塞\cite
 但从内核视角来看，实际上是多个协程在串行执行，因为它们只用到一个CPU核，
 因此协层做不到真正意义上的并行\cite{bogaerts2010concurrency}。\par
 
-那么什么时候该用线程，什么时候该用协程呢？\par
-
+在讨论一个技术的优劣时，离不开适用场景。
 对于计算密集型任务，多线程架构能充分利用多核，使得程序运行效率成倍提高，这时候使用线程；
 对于I/O密集型任务，程序大部分时间都在等待I/O数据，CPU负担不重，而协程切换开销小，因此这时候该用协程。
 在实际应用中，很多时候需要根据具体场景，结合两者使用。\par
@@ -263,7 +265,6 @@ Linux 平台上的I/O模型经历了几个发展阶段：阻塞，非阻塞\cite
   \end{tabular}
 \end{generaltab}
 
-\subsubsection{异步I/O和协程的结合}
 尽管异步I/O在理论上拥有比传统同步I/O更好的性能优势，但同时其带来的编程上的复杂性也是不容忽视的一部分。
 如何降低异步I/O带来的编程复杂度，是软件开发者必需考虑的问题之一。针对这个问题，工业界提出了一个
 解决方案：通过协程与异步I/O结合进而降低编程难度。\par
@@ -272,7 +273,7 @@ Linux 平台上的I/O模型经历了几个发展阶段：阻塞，非阻塞\cite
 再恢复运行协程A，这样就可以充分利用CPU资源。协程的运作模式和异步I/O浑然天成。\par
 
 \subsubsection{面临的问题和挑战}
-\textbf{高性能高可用的异步编程框架}。前两小节介绍的io\underline{~}uring和协程均为较原始，较底层的概念，
+前面介绍的io\underline{~}uring和协程均为较原始，较底层的概念，
 两者对于不熟悉操作系统和编程语言底层的一般应用软件开发者而言，无论是在理解原理上还是在工程实践上
 都存在较高难度。在现代的软件开发领域，分层设计已成共识，因此上层应用开发者需要一个易用的
 \textbf{异步编程框架}。通过该框架，他们可以在不了解io\underline{~}uring和协程底层原理的情况下
@@ -290,6 +291,9 @@ Linux 平台上的I/O模型经历了几个发展阶段：阻塞，非阻塞\cite
 希望可以借此解决传统并发编程和系统编程中的一些痛点。\par
 
 \subsection{国内外研究现状}
+
+目前，国内外对异步编程框架的研究主要体现了当前开源社区中的几个主流开源项目中，
+它们被广泛应用于业界场景，各自存在一定的优势和缺点。
 
 \subsubsection{Tokio：Rust异步运行时}
 在Rust语言开发领域内，上述的异步编程框架在这里被称为\textbf{异步运行时}（Async Runtime）。
@@ -333,6 +337,8 @@ Node.js性能很好，基于Node.js搭建的服务器程序能支持同时与数
 底层框架需要对JS代码进行解析，从而带来不低的性能开销。\par
 
 \subsection{课题研究的意义，内容和目标}
+
+本节将分别介绍本课题研究的意义，内容和目标。\par
 
 \subsubsection{课题研究的意义}
 本课题将围绕异步I/O和协程进行，目标是基于身为异步I/O接口之一的io\underline{~}uring和协程
@@ -1466,8 +1472,6 @@ Task需要经过一个或多个等待状态最终运行到完成状态。\par
 
 \cfig{task-execute}{1.0}{Task运行流程}
 
-
-
 在Rust和C++中，Executor模块的实现步骤为：
 
 \begin{enumerate}
@@ -1565,198 +1569,16 @@ CPU：Intel(R) Xeon(R) Gold 5117 CPU @ 2.00GHz，56逻辑核，2物理核\par
 \subsubsubsection{测试结果}
 以下实验结果均采用5次重复实验求平均值得出。\par
 
-\begin{tikzpicture}
-  \begin{axis}[
-      title={M=1 KB, L=1},
-      xlabel={Number of files(N)},
-      ylabel={Cost of time [ms]},
-      legend style={nodes={scale=0.7, transform shape}},
-      legend pos=north west
-    ]
-    
-    \addplot[color=red, mark=square]
-    coordinates {
-      (512,127.8)
-      (1024,147.6)
-      (1024*2,174.6)
-      (1024*3,186.2)
-      (1024*4,235.4)
-      (1024*5,262.6)
-      (1024*6,270.6)
-      (1024*7,313)
-      (1024*8,331.4)
-    };
-    \addlegendentry{Kuro}
+文件测试结果如\rfig{bench-fs-0}，\rfig{bench-fs-1}：
 
-    \addplot[color=black, mark=square]
-    coordinates {
-      (512,97.8)
-      (1024,116.2)
-      (1024*2,142.8)
-      (1024*3,163)
-      (1024*4,182.6)
-      (1024*5,206.6)
-      (1024*6,230.6)
-      (1024*7,249.2)
-      (1024*8,276.8)
-    };
-    \addlegendentry{Emma}
+% \cfig{bench-fs-0}{0.5}{单核文件测试}
+%
+% \cfig{bench-fs-1}{0.5}{多核文件测试}
 
-    \addplot[color=orange, mark=square]
-    coordinates {
-      (512,155.6)
-      (1024,205.8)
-      (1024*2,225.4)
-      (1024*3,258.6)
-      (1024*4,313.2)
-      (1024*5,331.6)
-      (1024*6,348.4)
-      (1024*7,390.6)
-      (1024*8,436.4)
-    };
-    \addlegendentry{Tokio}
-    
-    \addplot[color=green, mark=square]
-    coordinates {
-      (512,139.6)
-      (1024,216.8)
-      (1024*2,314.8)
-      (1024*3,421.8)
-      (1024*4,533.4)
-      (1024*5,620)
-      (1024*6,740.6)
-      (1024*7,844.6)
-      (1024*8,940.6)
-    };
-    \addlegendentry{async-std}
-    
-    \addplot[color=blue, mark=square]
-    coordinates {
-      (512,80.6)
-      (1024,91.4)
-      (1024*2,118.2)
-      (1024*3,175)
-      (1024*4,215.2)
-      (1024*5,235.6)
-      (1024*6,253.2)
-      (1024*7,302.8)
-      (1024*8,317.4)
-    };
-    \addlegendentry{Go}
-    
-    \addplot[color=purple, mark=square]
-    coordinates {
-      (512,21)
-      (1024,34.2)
-      (1024*2,56.6)
-      (1024*3,79.6)
-      (1024*4,101.2)
-      (1024*5,120.6)
-      (1024*6,144.4)
-      (1024*7,166.4)
-      (1024*8,186.6)
-    };
-    \addlegendentry{Sync}
-
-  \end{axis}
-\end{tikzpicture}
-
-\begin{tikzpicture}
-  \begin{axis}[
-      title={M=1 KB, L=32},
-      xlabel={Number of files(N)},
-      ylabel={Cost of time [ms]},
-      legend style={nodes={scale=0.7, transform shape}},
-      legend pos=north west
-    ]
-    
-    \addplot[color=red, mark=square]
-    coordinates {
-      (512,122)
-      (1024,156.2)
-      (1024*2,178.6)
-      (1024*3,179.8)
-      (1024*4,180)
-      (1024*5,189)
-      (1024*6,194.2)
-      (1024*7,195.6)
-      (1024*8,197.8)
-    };
-    \addlegendentry{Kuro}
-
-    \addplot[color=black, mark=square]
-    coordinates {
-      (512,93.6)
-      (1024,90.2)
-      (1024*2,101)
-      (1024*3,107.2)
-      (1024*4,104.2)
-      (1024*5,113.4)
-      (1024*6,112)
-      (1024*7,119.6)
-      (1024*8,112.4)
-    };
-    \addlegendentry{Emma}
-    
-    \addplot[color=orange, mark=square]
-    coordinates {
-      (512,171.8)
-      (1024,209.2)
-      (1024*2,284.8)
-      (1024*3,348.4)
-      (1024*4,437.2)
-      (1024*5,495.4)
-      (1024*6,577.4)
-      (1024*7,654.8)
-      (1024*8,750.2)
-    };
-    \addlegendentry{Tokio}
-
-    \addplot[color=green, mark=square]
-    coordinates {
-      (512,139.6)
-      (1024,216.8)
-      (1024*2,314.8)
-      (1024*3,421.8)
-      (1024*4,533.4)
-      (1024*5,620)
-      (1024*6,740.6)
-      (1024*7,844.6)
-      (1024*8,940.6)
-    };
-    \addlegendentry{async-std}
-
-    \addplot[color=blue, mark=square]
-    coordinates {
-      (512,80.6)
-      (1024,91.4)
-      (1024*2,118.2)
-      (1024*3,175)
-      (1024*4,215.2)
-      (1024*5,235.6)
-      (1024*6,253.2)
-      (1024*7,302.8)
-      (1024*8,317.4)
-    };
-    \addlegendentry{Go}
-
-    \addplot[color=purple, mark=square]
-    coordinates {
-      (512,4)
-      (1024,7)
-      (1024*2,13)
-      (1024*3,19)
-      (1024*4,23)
-      (1024*5,28)
-      (1024*6,31)
-      (1024*7,35)
-      (1024*8,39)
-    };
-    \addlegendentry{Sync}
-
-  \end{axis}
-\end{tikzpicture}
-
+\xfig{bench-fs}{文件测试}{
+  \sfig{bench-fs-0}{0.4}{单核文件测试}
+  \sfig{bench-fs-1}{0.4}{32核文件测试}
+}
 
 \subsubsubsection{结果分析}
 
@@ -1805,210 +1627,16 @@ ab是Apache旗下的一个用于测试Web服务器性能的压力测试工具，
 \subsubsubsection{测试结果}
 以下测试结果均采用5次重复实验求平均值得出。\par
 
-\begin{tikzpicture}
-  \begin{axis}[
-      title={C=20, L=54},
-      xlabel={Number of requests(N)},
-      ylabel={Throughput [requests per second]},
-      legend style={nodes={scale=0.7, transform shape}},
-      legend pos=north east
-    ]
-    
-    \addplot[color=red]
-    coordinates {
-      (2000,1014.75)
-      (4000,716.25)
-      (6000,857.81)
-      (8000,555.05)
-      (10000,449.41)
-      (12000,325)
-      (14000,362.92)
-      (16000,307.48)
-      (18000,283.32)
-      (20000,293.67)
-    };
-    \addlegendentry{Kuro}
-  
-    \addplot[color=black]
-    coordinates {
-      (2000,1088)
-      (4000,674)
-      (6000,722)
-      (8000,783)
-      (10000,307.58)
-      (12000,375.45)
-      (14000,303.54)
-      (16000,348.05)
-      (18000,284.63)
-      (20000,294.31)
-    };
-    \addlegendentry{Emma}
-    
-    \addplot[color=orange]
-    coordinates {
-      (2000,993.34)
-      (4000,762.11)
-      (6000,684.81)
-      (8000,350.44)
-      (10000,350.68)
-      (12000,310.33)
-      (14000,289.6)
-      (16000,307.30)
-      (18000,284.48)
-      (20000,294.51)
-    };
-    \addlegendentry{Tokio}
+网络测试结果如\rfig{bench-net-0}，\rfig{bench-net-1}：\par
 
-    \addplot[color=green]
-    coordinates {
-      (2000,745)
-      (4000,710)
-      (6000,694.98)
-      (8000,491.11)
-      (10000,268)
-      (12000,269.29)
-      (14000,335.21)
-      (16000,292.36)
-      (18000,277.43)
-      (20000,293.38)
-    };
-    \addlegendentry{async-std}
+% \cfig{bench-net-0}{0.5}{20并发网络测试}
+%
+% \cfig{bench-net-1}{0.5}{200并发网络测试}
 
-    \addplot[color=blue]
-    coordinates {
-      (2000,278.65)
-      (4000,280)
-      (6000,285.5)
-      (8000,65.63)
-      (10000,35.68)
-      (12000,79.89)
-      (14000,68.74)
-      (16000,71.35)
-      (18000,64.78)
-      (20000,68.78)
-    };
-    \addlegendentry{Go}
-
-    \addplot[color=purple]
-    coordinates {
-      (2000,855)
-      (4000,511)
-      (6000,426)
-      (8000,323.05)
-      (10000,317.41)
-      (12000,301.09)
-      (14000,269.92)
-      (16000,277.48)
-      (18000,276.32)
-      (20000,279.67)
-    };
-    \addlegendentry{Sync}
-
-  \end{axis}
-\end{tikzpicture}
-
-
-\begin{tikzpicture}
-  \begin{axis}[
-      title={C=200, L=54},
-      xlabel={Number of requests(N)},
-      ylabel={Throughput [requests per second]},
-      legend style={nodes={scale=0.7, transform shape}},
-      legend pos=north east
-    ]
-
-    \addplot[color=red]
-    coordinates {
-      (2000,1848.60)
-      (4000,1804.40)
-      (6000,1817.68)
-      (8000,860.36)
-      (10000,513.02)
-      (12000,496.14)
-      (14000,468.13)
-      (16000,401.29)
-      (18000,607.912)
-      (20000,410.65)
-    };
-    \addlegendentry{Kuro}
-
-    \addplot[color=black]
-    coordinates {
-      (2000,1369.70)
-      (4000,1405.72)
-      (6000,1420.92)
-      (8000,652.52)
-      (10000,432.81)
-      (12000,454.36)
-      (14000,460.18)
-      (16000,463.651)
-      (18000,368.08)
-      (20000,458.60)
-    };
-    \addlegendentry{Emma}
-
-    \addplot[color=orange]
-    coordinates {
-      (2000,1419.75)
-      (4000,1404.97)
-      (6000,1400.10)
-      (8000,569.01)
-      (10000,336.44)
-      (12000,403.31)
-      (14000,380.33)
-      (16000,325.14)
-      (18000,404.63)
-      (20000,368.56)
-    };
-    \addlegendentry{Tokio}
-
-    \addplot[color=green]
-    coordinates {
-      (2000,1223.86)
-      (4000,1119.30)
-      (6000,825.98)
-      (8000,569.42)
-      (10000,369.17)
-      (12000,370.69)
-      (14000,343.11)
-      (16000,406.91)
-      (18000,363.45)
-      (20000,378.93)
-    };
-    \addlegendentry{async-std}
-
-    \addplot[color=blue]
-    coordinates {
-      (2000,61.39)
-      (4000,60.24)
-      (6000,69.99)
-      (8000,71.19)
-      (10000,74.03)
-      (12000,59.66)
-      (14000,68.39)
-      (16000,69.24)
-      (18000,58.75)
-      (20000,63.64)
-    };
-    \addlegendentry{Go}
-
-    \addplot[color=purple]
-    coordinates {
-      (2000,1037.15)
-      (4000,1365.26)
-      (6000,1368.78)
-      (8000,377.95)
-      (10000,366.30)
-      (12000,333.49)
-      (14000,290.28)
-      (16000,278.81)
-      (18000,263.93)
-      (20000,274.68)
-    };
-    \addlegendentry{Sync}
-
-  \end{axis}
-\end{tikzpicture}
+\xfig{bench-net}{网络测试}{
+  \sfig{bench-net-0}{0.4}{20并发网络测试}
+  \sfig{bench-net-1}{0.4}{200并发网络测试}
+}
 
 \subsubsubsection{结果分析}
 
