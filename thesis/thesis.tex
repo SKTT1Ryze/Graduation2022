@@ -124,7 +124,7 @@
 面对线程切换开销大的现状，现代许多编程语言均提出了协程的概念，旨在提供一个更轻量，高效的并发编程模式。\par
 
 基于异步I/O和协程设计并分别使用Rust和C++语言实现了两款高性能的异步编程框架\textbf{Emma}和\textbf{Kuro}。
-Emma和Kuro框架底层使用了Linux平台上先进的io\underline{~}uring技术，并兼容C++和Rust语言的官方协程标准，
+Emma和Kuro框架底层使用了Linux平台上先进的io\underline{~}uring技术，并兼容Rust和C++语言的官方协程标准，
 相比传统的同步I/O和多线程编程模式，具有更轻量，更高性能的优势。\par
 
 在功能上，Emma和Kuro框架提供简单易用的接口，
@@ -132,7 +132,7 @@ Emma和Kuro框架底层使用了Linux平台上先进的io\underline{~}uring技�
 在性能上，Emma和Kuro框架和当前开源生态中主流的性能最高的异步编程框架相比，
 具备更高的性能。
 此外，通过对Emma和Kuro框架和传统的同步I/O与多线程编程模式进行性能对比测试，
-验证了异步I/O结合协程能提升高并发场景中服务器程序的执行效率。\par
+验证了异步I/O结合协程能提升高并发场景中网络服务器的吞吐量。\par
 
 \end{cnabstract}
 
@@ -164,7 +164,7 @@ with the ability to build high-performance storage and network applications.
 In terms of performance, the Emma and Kuro frameworks have higher performance
 than the mainstream asynchronous programming frameworks with the highest performance in the current open source ecosystem.
 In addition, through the performance comparison test of Emma and Kuro frameworks and traditional synchronous I/O and multi-threaded programming modes,
-it is verified that asynchronous I/O combined with coroutines can improve the execution efficiency of server programs in high concurrency scenarios.\par
+it is verified that asynchronous I/O combined with coroutines can improve the throughput of network servers in high concurrency scenarios.\par
 
 \end{enabstract}
 
@@ -234,18 +234,18 @@ Linux 平台上的I/O模型经历了几个发展阶段：阻塞，非阻塞\cite
 协程具有以下特点：
 
 \begin{enumerate}
-  \item 类似于用户态的线程，属于线程之外的另一种并发模型；
+  \item 类似于用户态提供的线程，属于线程之外的另一种并发模型；
   \item 可以在执行中途挂起和随后恢复；
   \item 不像线程一样拥有独立的系统栈空间，因此无法使用多核实现真正的并行；
   \item 协程间切换不需要特权级切换，也不需要整个用户上下文的切换，因此切换开销比线程小许多。
 \end{enumerate}
 
 协程可以被理解为能挂起和恢复的函数。当创建了多个协程时，从用户视角来看可以认为是多个协程在并发运行，
-但从内核视角来看，实际上是多个协程在串行执行，因为它们只用到一个CPU核，
-因此协层做不到真正意义上的并行\cite{bogaerts2010concurrency}。\par
+从内核视角来看，实际上是多个协程在串行执行，因为它们只用到一个CPU核，
+因此协程做不到真正意义上的并行\cite{bogaerts2010concurrency}。\par
 
 在讨论一个技术的优劣时，离不开适用场景。
-对于计算密集型任务，多线程架构能充分利用多核，使得程序运行效率成倍提高，这时候使用线程；
+在线程和协程的使用选择上，对于计算密集型任务，多线程架构能充分利用多核，使得程序运行效率成倍提高，这时候使用线程；
 对于I/O密集型任务，程序大部分时间都在等待I/O数据，CPU负担不重，而协程切换开销小，因此这时候该用协程。
 在实际应用中，很多时候需要根据具体场景，结合两者使用。\par
 
@@ -274,10 +274,10 @@ Linux 平台上的I/O模型经历了几个发展阶段：阻塞，非阻塞\cite
 再恢复运行协程A，这样就可以充分利用CPU资源。协程的运作模式和异步I/O浑然天成。\par
 
 \subsubsection{面临的问题和挑战}
-前面介绍的io\underline{~}uring和协程均为较原始，较底层的概念，
+前面介绍的异步I/O和协程均为较原始，较底层的概念，
 两者对于不熟悉操作系统和编程语言底层的一般应用软件开发者而言，无论是在理解原理上还是在工程实践上
-都存在较高难度。在现代的软件开发领域，分层设计已成共识，因此上层应用开发者需要一个易用的
-\textbf{异步编程框架}。通过该框架，他们可以在不了解io\underline{~}uring和协程底层原理的情况下
+都存在较高难度。在现代的软件开发领域，分层设计已成共识，因此上层应用开发者需要一个易用的\textbf{异步编程框架}。
+通过该框架，他们可以在不了解异步I/O和协程底层原理的情况下
 充分利用到两者的高性能特点，从中收益。\par
 
 这种异步编程框架，在不同的编程语言里面存在不同称呼，比如在C++语言里面它被称为\textbf{协程库}，
@@ -288,7 +288,7 @@ Linux 平台上的I/O模型经历了几个发展阶段：阻塞，非阻塞\cite
 
 遗憾的是，目前系统编程领域的软件生态对于上述的异步编程框架暂时留有较大一片空白。尽管存在一些相关
 的开源项目，但各自在实际应用中都暴露了或多或少的不足。因此分别基于Rust语言\cite{klabnik2019rust}和C++语言设计并实现了
-一个异步编程框架，对底层io\underline{~}uring和协程进行了封装，向上层应用开发提供了简单易用的编程接口，
+两款异步编程框架，对底层io\underline{~}uring和协程进行了封装，向上层应用开发提供了简单易用的编程接口，
 希望可以借此解决传统并发编程和系统编程中的一些痛点。\par
 
 \subsection{国内外研究现状}
@@ -337,6 +337,22 @@ Node.js性能很好，基于Node.js搭建的服务器程序能支持同时与数
 即可进行服务端程序的开发。然而，Node.js依然存在缺点，其中一个是JS本质上是解释性语言，
 底层框架需要对JS代码进行解析，从而带来不低的性能开销。\par
 
+\subsubsection{研究现状总结}
+对异步编程框架的研究现状总结对比如\rtbl{repos}：
+
+\begin{generaltab}{研究现状对比}{tbl:repos}
+  \begin{tabular}{c|cccc}
+    \toprule
+    -- & Tokio & libco & Go & Node.js \\
+    \midrule
+    支持语言 & Rust & C++ & Golang & JavaScript \\
+    性能 & 较高 & 高 & 较高 & 较高 \\
+    兼容性 & 高 & 低 & 高 & 高 \\
+    可扩展性 & 高 & 高 & 低 & 高 \\
+    是否应用于业界 & 是 & 是 & 是 & 是 \\
+    \bottomrule
+  \end{tabular}
+\end{generaltab}
 \subsection{课题研究的意义，内容和目标}
 
 本节将分别介绍本课题研究的意义，内容和目标。\par
@@ -409,7 +425,7 @@ Linux上存在五种I/O模型：阻塞I/O，非阻塞I/O，I/O复用，信号驱
 其中前四种属于同步I/O模型，第五种属于异步I/O模型。下面将会对这五种I/O模型进行详细分析。\par
 
 \subsubsection{阻塞I/O模型}
-用户线程发起I/O请求后，进入内核态，内核线程请求硬件设备，等待数据准备好后，内核线程将数据拷贝到用户态空间，
+如\rfig{block-io}，用户线程发起I/O请求后，进入内核态，内核线程请求硬件设备，等待数据准备好后，内核线程将数据拷贝到用户态空间，
 然后返回到用户态，用户线程得以继续执行。在此场景用户线程在执行流进入内核态到返回到用户态之间的这段时间内，
 一直处于阻塞状态，因此阻塞I/O属于同步I/O模型。\par
 
@@ -418,7 +434,7 @@ Linux上存在五种I/O模型：阻塞I/O，非阻塞I/O，I/O复用，信号驱
 \cfig{block-io}{0.5}{阻塞I/O模型}
 
 \subsubsection{非阻塞I/O模型}
-用户线程发起I/O请求后，进入内核态，内核线程检查数据准备状态，这时候会有两种情况：
+如\rfig{nonblock-io}，用户线程发起I/O请求后，进入内核态，内核线程检查数据准备状态，这时候会有两种情况：
 
 \begin{enumerate}
   \item 数据未就绪，这时候内核会返回一个错误信号给用户线程，用户线程收到错误信号，需要再次发起系统调用进入内核；
@@ -433,20 +449,19 @@ Linux上存在五种I/O模型：阻塞I/O，非阻塞I/O，I/O复用，信号驱
 \cfig{nonblock-io}{0.5}{非阻塞I/O模型}
 
 \subsubsection{I/O复用模型}
-多个用户线程注册I/O请求到一个复用器上，然后使用一个用户线程监听该复用器。用户线程提交监听请求后，
+如\rfig{io-multiplex}，多个用户线程注册I/O请求到一个复用器上，然后使用一个用户线程监听该复用器。用户线程提交监听请求后，
 进入内核态，内核遍历复用器上的I/O请求并请求硬件设备。当多个I/O请求中某个请求的数据就绪后，
 内核将其拷贝到用户态空间，然后返回到用户态，用户线程继续执行。在此场景，用户线程在发起系统调用进入内核后
 到返回到用户态之间的这段时间内，一直处于阻塞状态，因此I/O复用依然属于同步I/O模型。\par
 
-I/O复用的好处在于可以通过一个用户线程的阻塞换取多个用户线程的非阻塞，获得整体上的性能提升。Linux 上的
-select, poll, epoll等机制就是典型的I/O复用模型\par
+I/O复用的好处在于可以通过一个用户线程的阻塞换取多个用户线程的非阻塞，获得整体上的性能提升。\par
 
 典型例子：Linux上的select，poll，epoll机制。\par
 
 \cfig{io-multiplex}{0.7}{I/O复用模型}
 
 \subsubsection{信号驱动I/O模型}
-信号驱动I/O模型通常用于Linux上的网络编程。用户线程通过sigaction系统调用在某个套接字（socket）上
+如\rfig{signal-driven}，信号驱动I/O模型通常用于Linux上的网络编程。用户线程通过sigaction系统调用在某个套接字（socket）上
 注册信号处理函数，注册完成后返回用户态，此时用户线程不阻塞。与此同时，内核线程请求硬件设备，
 当套接字上有数据报准备好时，向用户线程递交一个SIGIO信号。用户线程收到信号后，调用信号处理函数进行真正
 的I/O请求（例如recvfrom(2)），此时会重新进入内核态，内核线程拷贝数据到用户态空间后，再回到用户态，
@@ -463,7 +478,7 @@ select, poll, epoll等机制就是典型的I/O复用模型\par
 \subsubsection{异步I/O模型}
 以上四种I/O模型都属于同步I/O，共同特点是它们都存在某个时间段内的阻塞现象。\par
 
-异步I/O在整个I/O操作过程中不存在阻塞现象。用户线程通过系统调用发起I/O请求后，首次进入内核态，
+如\rfig{async-io}，异步I/O在整个I/O操作过程中不存在阻塞现象。用户线程通过系统调用发起I/O请求后，首次进入内核态，
 内核线程收到请求后进行处理，然后不做任何等待直接返回到用户态，用户线程继续执行。
 当内核等待数据就绪并完成数据拷贝后，会通过某种方式通知用户。用户线程收到通知后，便可从容地处理数据。\par
 
@@ -512,7 +527,7 @@ Linux社区开发者们最初的想法是尝试改进AIO接口，并且持续了
   \item 修改AIO接口会引入新的问题（bug），或者会使得现有问题变得更加严重，比如会使得现有API变得复杂，难以使用。
 \end{enumerate}
 
-以上种种因素使得Linux社区迎来了他们日思暮想的新时代的异步I/O接口。
+以上种种因素使得Linux社区迎来了他们日思暮想的新时代的异步I/O接口：
 io\underline{~}uring，于Linux 5.1版本开始提供，统一了整个Linux平台上的异步I/O框架。\par
 
 \subsubsection{io\underline{~}uring设计目标}
@@ -542,7 +557,7 @@ io\underline{~}uring使用\textbf{共享内存}\cite{adve1996shared}来实现内
   \item 完成队列（Completion Queue，简称CQ），用于内核提交I/O完成事件和用户获取I/O完成信息。
 \end{enumerate}
 
-提交队列和完成队列均为单生产者单消费者模型，容量大小为2的幂次方，同时支持无锁并发，内部通过内存屏障技术实现状态同步。\par
+提交队列和完成队列均为单生产者单消费者模型，容量大小为2的幂次方，同时支持无锁并发，内部通过内存屏障\cite{mosberger1993memory}技术实现状态同步。\par
 
 io\underline{~}uring中有两个基本操作：提交I/O请求和通知I/O完成事件：
 \begin{enumerate}
@@ -603,8 +618,6 @@ io\underline{~}uring\underline{~}enter用于：
 对io\underline{~}uring相关的一些底层细节
 进行了封装，向用户程序开发者提供了更加简洁易用的API。\par
 
-本课题中的项目实现也使用了liburing作为依赖库。\par
-
 \subsection{有栈协程与无栈协程}
 许多现代编程语言均支持了协程，其中包括Rust，C++，Go，JavaScript。
 协程可以分为\textbf{有栈协程}和\textbf{无栈协程}，其中Rust，C++ 20，JavaScript中支持的是无栈协程，
@@ -649,6 +662,8 @@ io\underline{~}uring\underline{~}enter用于：
 
 \subsection{系统需求分析}
 
+本节分别从功能需求和可行性两个方面进行系统需求分析。\par
+
 \subsubsection{功能需求分析}
 
 \textbf{异步编程框架的必要性}：无论是异步I/O还是协程，都是比较偏系统底层的概念，
@@ -660,7 +675,7 @@ io\underline{~}uring\underline{~}enter用于：
 \textbf{异步编程框架需要实现的功能}：
 \begin{enumerate}
   \item 底层封装。对io\underline{~}uring和协程进行封装，在不向上暴露两者细节的同时，提供外部接口；
-  \item 接口易用。提供用于构建网络应用和存储应用所需的简单易用的功能接口，例如TCP协议的连接；
+  \item 接口易用。提供用于构建网络应用和存储应用所需的简单易用的功能接口，例如TCP协议的网络连接；
   \item 安全。框架需确保稳定可靠，不允许出现内存泄漏，死锁等问题；
   \item 高性能。框架需要比目前主流的异步编程框架具备更高的性能。
 \end{enumerate}
@@ -733,7 +748,7 @@ Op，IoUring，Executor等基础层模块当中，向外暴露的只有文件，
 
 \subsubsection{Op模块与Op派生子类}
 
-Op在本系统设计中指代I/O相关操作的基本单元，从面向对象角度考虑它可以被理解为所有
+Op在本系统设计中指代I/O相关操作的基本单元，从面向对象\cite{burton2003teaching}角度考虑它可以被理解为所有
 I/O操作的\textbf{基类}。\par
 
 在Linux平台上，存在非常多的I/O操作，比如read(2)，write(2)，recv(2)等。
@@ -827,8 +842,7 @@ Executor模块通过调用接口（2）来运行Task实例，当运行到切换�
 Task实例。特别需要说明的是，Task实例的恢复操作复用接口（2）：当一个Task被挂起后又重新被执行时，
 等同于被该Task被恢复了。\par
 
-上述接口（4）提供了在Task运行结束时获得其中返回值的能力。这个能力往往通过编译器提供，
-在Executor模块中使用。\par
+上述接口（4）提供了在Task运行结束时获得其中返回值的能力。\par
 
 \subsubsection{Scheduler模块}
 
@@ -1090,7 +1104,7 @@ Waker通过Context参数传递给Future的poll方法，每个Future都应该在�
 Reactor中，这样Reacotr才能够在事件来临时唤醒相应的Future。\par
 
 \subsubsection{Rust异步编程架构}
-以架构图总结一下Rust异步编程：
+总结一下Rust异步编程架构如\rfig{rust-async}：
 
 \cfig{rust-async}{0.9}{Rust异步架构}
 
@@ -1150,7 +1164,7 @@ co\underline{~}return 后面跟的表达式的值会作为参数传递给Promise
 \begin{generaltab}{C++异步vsRust异步}{tbl:cc-async-vs-rust-async}
   \begin{tabular}{c|ccc}
     \toprule
-    -- & C++ & Rust \\
+    -- & C++ 20 & Rust \\
     \midrule
     协程称呼 & Coroutine & 异步任务 \\
     协程类型 & 无栈协程 & 无栈协程 \\
@@ -1220,7 +1234,7 @@ Op类实现了Awaitable接口后，就变成了C++异步编程中的一个将来
 
 \subsubsection{Rust中的实现}
 
-在Rust中，用到一个第三方库\textbf{io-uring}来实现IoUring模块。\par
+在Rust中，用到一个第三方库\textbf{io-uring}\cite{io-uring.org}来实现IoUring模块。\par
 
 io-uring是一个对io\underline{~}uring相关底层接口进行封装的Rust第三方库，
 它提供一个IoUring结构体，同时为这个结构体实现了一系列方法用于对io\underline{~}uring实例进行操作。\par
@@ -1265,8 +1279,9 @@ io-uring是一个对io\underline{~}uring相关底层接口进行封装的Rust第
 \begin{enumerate}
   \item 指代异步任务；
   \item 是一个大Future；
-  \item 由一个或多个小Future通过组合性构成；
-  \item 本质山是一个结构体。
+  \item 由一个或多个小Future通过组合构成；
+  \item Future间的组合性通过async/await关键字实现；
+  \item 本质上是一个结构体。
 \end{enumerate}
 
 在明确以上几点后，Task模块的实现过程为：
@@ -1551,13 +1566,16 @@ CPU：Intel(R) Xeon(R) Gold 5117 CPU @ 2.00GHz，56逻辑核，2物理核\par
 此外，为了验证异步I/O和协程的高性能，增加一组对照组：基于同步I/O和多线程的传统并发编程框架，
 起名为\textbf{Sync}。\par
 
+因为需要对比实验的是底层框架的性能，因此测试的基本思路是使用各个异步编程框架
+编写一些实现逻辑相同的应用程序，然后对应用程序的执行性能进行测量，最终对比测试结果。\par
+
 从应用视角将性能测试分为文件和网络两部分，每个部分都拥有独立的测试方法和结果分析。\par
 
 \subsubsection{文件性能测试}
 
 \subsubsubsection{测试方法}
 
-使用参与性能测试的各框架编写一个文件操作的简单应用程序，该应用需要完成多个固定大小的文件的读写任务。\par
+使用参与性能测试的各框架编写一个文件操作的应用程序，该应用需要完成多个固定大小的文件的读写任务。\par
 
 控制变量包括：
 
@@ -1594,13 +1612,13 @@ CPU：Intel(R) Xeon(R) Gold 5117 CPU @ 2.00GHz，56逻辑核，2物理核\par
     这表示实现的框架Emma和Kuro同样可以充分利用到现代CPU的多核架构，发挥极致的性能；
   \item 此外发现，基于Sync框架，也就是同步I/O和多线程模式编写的文件读写测试用例在测试中获得了最高的性能，
     这和预想的不一样，似乎异步I/O和协程并不比同步I/O和线程高效。
-    对此，猜想出现这样结果的原因如下：
+    对此，分析出现这样结果的原因如下：
     \begin{enumerate}
       \item 读写文件的并发量和数据量不够，没能将服务器的磁盘I/O打满，
         这导致同步I/O没有因为等待数据而阻塞太长时间，
         很快便返回了；反观io\underline{~}uring这边，为了实现复杂的异步I/O接口，引入了一定开销，
         导致在对轻量I/O任务的执行效率上不及同步I/O；
-      \item 在此测试用例中，没有创建太多线程，因此协程的切换开销小的性能优势没有体现出来。
+      \item 在此测试用例中，Sync框架没有创建太多线程，因此协程的切换开销小的性能优势没有体现出来。
     \end{enumerate}
 \end{enumerate}
 
@@ -1617,7 +1635,7 @@ CPU：Intel(R) Xeon(R) Gold 5117 CPU @ 2.00GHz，56逻辑核，2物理核\par
 
 \begin{enumerate}
   \item HTTP请求数N；
-  \item 客户端数量C；
+  \item 客户端并发C；
   \item CPU核数L。
 \end{enumerate}
 
@@ -1625,7 +1643,7 @@ CPU：Intel(R) Xeon(R) Gold 5117 CPU @ 2.00GHz，56逻辑核，2物理核\par
 
 使用Apache Benchmark（简称ab）工具来模拟多客户端的并发请求。
 ab是Apache旗下的一个用于测试Web服务器性能的压力测试工具，
-它基于多线程来模拟多个客户端同时对某一IP地址进行访问，对发压端机器的要求较低，
+它基于多线程来模拟多个客户端同时对某一IP地址进行访问，对发压端（客户端）机器的配置要求较低，
 却能给目标服务器带来巨大的负载。\par
 
 \subsubsubsection{测试结果}
@@ -1664,6 +1682,20 @@ ab是Apache旗下的一个用于测试Web服务器性能的压力测试工具，
     \end{enumerate}
 \end{enumerate}
 
+\subsubsection{性能测试分析总结}
+对上述性能测试结果总结如下：
+
+\begin{enumerate}
+  \item 实现的异步编程框架Emma和Kuro在性能上比三款主流的开源框架Tokio，async-std和Go表现更好；
+  \item Emma和Kuro在文件测试上性能不及同步I/O和多线程框架，在网络测试上表现更好，
+    对此结论的分析是：
+    \begin{enumerate}
+      \item 文件测试没能将磁盘I/O打满，I/O数据很快返回，这时候同步I/O性能更好；
+      \item 网络测试中服务器满负载运作，I/O数据返回较慢，这时候异步I/O性能更好。
+    \end{enumerate}
+\end{enumerate}
+
+
 \subsection{本章小结}
 本章对实现的异步编程框架Emma和Kuro分别进行了文件部分和网络部分的性能测试，
 通过和目前主流的开源异步编程框架进行对比实验，验证了Emma和Kuro还有io\underline{~}uring的高性能特点；
@@ -1675,8 +1707,8 @@ ab是Apache旗下的一个用于测试Web服务器性能的压力测试工具，
 异步I/O和协程是近年来逐渐在底层系统编程领域兴起的两个研究方向，
 而异步编程框架则是两者在工程实践上的典型例子。通过异步编程框架，
 应用软件开发者们可以在不具备完整操作系统和编译原理知识体系的前提下
-利用到异步I/O和协程的高性能。同时，随着互联网用户体量的增加和5G技术的发展，
-对于高效的I/O方案和支持高并发的服务端开发技术的需求越来越高，
+利用到异步I/O和协程的高性能。同时，随着互联网用户体量的不断增加和5G技术的持续发展，
+企业对于高效的I/O方案和支持高并发的服务端开发技术的需求越来越高，
 高性能异步编程框架的价值将会越来越大。\par
 
 首先以异步I/O和协程为基点，对io\underline{~}uring，有栈协程和无栈协程等背景技术进行了介绍。
