@@ -1,6 +1,6 @@
 \documentclass[supercite]{HustGraduPaper}
 
-\title{基于io\underline{~}uring和协程的高性能异步编程框架设计与实现}
+\title{基于Linux异步I/O和协程的高性能异步编程框架设计与实现}
 \author{车春池}
 \school{计算机科学与技术}
 \classnum{校际交流1801}
@@ -124,7 +124,7 @@
 面对线程切换开销大的现状，现代许多编程语言均提出了协程的概念，旨在提供一个更轻量，高效的并发编程模式。\par
 
 基于异步I/O和协程设计并分别使用Rust和C++语言实现了两款高性能的异步编程框架\textbf{Emma}和\textbf{Kuro}。
-Emma和Kuro框架底层使用了Linux平台上先进的io\underline{~}uring技术，并兼容Rust和C++语言的官方协程标准，
+Emma和Kuro框架底层使用了Linux平台上先进的异步I/O（io\underline{~}uring）技术，并兼容Rust和C++语言的官方协程标准，
 相比传统的同步I/O和多线程编程模式，具有更轻量，更高性能的优势。\par
 
 在功能上，Emma和Kuro框架提供简单易用的接口，
@@ -132,11 +132,11 @@ Emma和Kuro框架底层使用了Linux平台上先进的io\underline{~}uring技�
 在性能上，Emma和Kuro框架和当前开源生态中主流的性能最高的异步编程框架相比，
 具备更高的性能。
 此外，通过对Emma和Kuro框架和传统的同步I/O与多线程编程模式进行性能对比测试，
-验证了异步I/O结合协程能提升高并发场景中网络服务器的吞吐量。\par
+验证了异步I/O结合协程在高并发场景中最高能带来78\%的性能提升。\par
 
 \end{cnabstract}
 
-\begin{enabstract}{Asynchronous I/O, Coroutine, Programming framework}
+\begin{enabstract}{Asynchronous I/O, Coroutine, Asynchronous programming framework}
 
 In the era of big data, with the rapid growth of the number of Internet users, data centers
 are faced with increasingly large and frequent data access, and the demand for more efficient
@@ -147,7 +147,7 @@ researching more efficient asynchronous I/O solutions, hoping to improve the ove
 of the system.
 At the same time, in the field of system concurrent programming, the traditional multi-threaded
 programming mode has gradually shown its drawbacks.In recent years, the performance of storage
-devices has been continuously improved. Today, the overhead of one I/O operaion on some high-speed
+devices has been continuously improved. Today, the overhead of one I/O operation on some high-speed
 storage devices is comparable to the overhead of on thread switching. This means that every time
 the system is switched between threads, an I/O time is wasted. Faced with the current situation
 of heavy thread switching overhead, many modern programming languages have proposed the concept
@@ -155,7 +155,7 @@ of coroutines, aiming to provide a lighter and more efficient concurrent program
 
 Based on the Linux asynchronous I/O interface io\underline{~}uring and coroutine design,
 two high-performance asynchronous programming frameworks \textbf{Emma} and \textbf{Kuro} are implemented using Rust and C++ languages respectively.
-The Emma and Kuro frameworks use the advanced io\underline{~}uring technology on the Linux platform at the bottom,
+The Emma and Kuro frameworks use the advanced asynchronous I/O (io\underline{~}uring) technology on the Linux platform at the bottom,
 and are compatible with the official coroutine standards of C++ and Rust languages.
 Compared with traditional synchronous I/O and multi-threaded programming models, they have lighter weight and higher performance advantages.\par
 
@@ -164,7 +164,7 @@ with the ability to build high-performance storage and network applications.
 In terms of performance, the Emma and Kuro frameworks have higher performance
 than the mainstream asynchronous programming frameworks with the highest performance in the current open source ecosystem.
 In addition, through the performance comparison test of Emma and Kuro frameworks and traditional synchronous I/O and multi-threaded programming modes,
-it is verified that asynchronous I/O combined with coroutines can improve the throughput of network servers in high concurrency scenarios.\par
+It is verified that asynchronous I/O combined with coroutines can bring up to 78\% performance improvement in high concurrency scenarios.\par
 
 \end{enabstract}
 
@@ -408,6 +408,7 @@ Node.js性能很好，基于Node.js搭建的服务器程序能支持同时与数
 并展望下一步的工作开展方向。\par
 
 \section{背景技术概述}
+
 \subsection{同步I/O与异步I/O}
 Linux平台上的I/O操作从应用视角看大致可以分为两种：网络I/O和文件I/O，下文的讨论对其不予区分。\par
 
@@ -425,15 +426,18 @@ Linux上存在五种I/O模型：阻塞I/O，非阻塞I/O，I/O复用，信号驱
 其中前四种属于同步I/O模型，第五种属于异步I/O模型。下面将会对这五种I/O模型进行详细分析。\par
 
 \subsubsection{阻塞I/O模型}
+\cfig{block-io}{0.5}{阻塞I/O模型}
+
 如\rfig{block-io}，用户线程发起I/O请求后，进入内核态，内核线程请求硬件设备，等待数据准备好后，内核线程将数据拷贝到用户态空间，
 然后返回到用户态，用户线程得以继续执行。在此场景用户线程在执行流进入内核态到返回到用户态之间的这段时间内，
 一直处于阻塞状态，因此阻塞I/O属于同步I/O模型。\par
 
 典型例子：Linux上的read(2)，write(2)系统调用和配置为阻塞的套接字。\par
 
-\cfig{block-io}{0.5}{阻塞I/O模型}
 
 \subsubsection{非阻塞I/O模型}
+\cfig{nonblock-io}{0.5}{非阻塞I/O模型}
+
 如\rfig{nonblock-io}，用户线程发起I/O请求后，进入内核态，内核线程检查数据准备状态，这时候会有两种情况：
 
 \begin{enumerate}[label={(\arabic*)}]
@@ -446,9 +450,9 @@ Linux上存在五种I/O模型：阻塞I/O，非阻塞I/O，I/O复用，信号驱
 
 典型例子：Linux上配置为NONBLOCK的套接字。\par
 
-\cfig{nonblock-io}{0.5}{非阻塞I/O模型}
-
 \subsubsection{I/O复用模型}
+\cfig{io-multiplex}{0.7}{I/O复用模型}
+
 如\rfig{io-multiplex}，多个用户线程注册I/O请求到一个复用器上，然后使用一个用户线程监听该复用器。用户线程提交监听请求后，
 进入内核态，内核遍历复用器上的I/O请求并请求硬件设备。当多个I/O请求中某个请求的数据就绪后，
 内核将其拷贝到用户态空间，然后返回到用户态，用户线程继续执行。在此场景，用户线程在发起系统调用进入内核后
@@ -458,9 +462,9 @@ I/O复用的好处在于可以通过一个用户线程的阻塞换取多个用�
 
 典型例子：Linux上的select，poll，epoll机制。\par
 
-\cfig{io-multiplex}{0.7}{I/O复用模型}
-
 \subsubsection{信号驱动I/O模型}
+\cfig{signal-driven}{0.7}{信号驱动I/O模型}
+
 如\rfig{signal-driven}，信号驱动I/O模型通常用于Linux上的网络编程。用户线程通过sigaction系统调用在某个套接字（socket）上
 注册信号处理函数，注册完成后返回用户态，此时用户线程不阻塞。与此同时，内核线程请求硬件设备，
 当套接字上有数据报准备好时，向用户线程递交一个SIGIO信号。用户线程收到信号后，调用信号处理函数进行真正
@@ -473,10 +477,10 @@ I/O复用的好处在于可以通过一个用户线程的阻塞换取多个用�
 
 典型例子：Linux上的sigaction系统调用。\par
 
-\cfig{signal-driven}{0.7}{信号驱动I/O模型}
-
 \subsubsection{异步I/O模型}
 以上四种I/O模型都属于同步I/O，共同特点是它们都存在某个时间段内的阻塞现象。\par
+
+\cfig{async-io}{0.7}{异步I/O模型}
 
 如\rfig{async-io}，异步I/O在整个I/O操作过程中不存在阻塞现象。用户线程通过系统调用发起I/O请求后，首次进入内核态，
 内核线程收到请求后进行处理，然后不做任何等待直接返回到用户态，用户线程继续执行。
@@ -486,9 +490,7 @@ I/O复用的好处在于可以通过一个用户线程的阻塞换取多个用�
 
 典型例子：Linux上的io\underline{~}uring特性。\par
 
-\cfig{async-io}{0.7}{异步I/O模型}
-
-\subsection{Linux io\underline{~}uring}
+\subsection{Linux高性能异步I/O框架}
 
 \subsubsection{旧时代的异步I/O接口：AIO}
 在io\underline{~}uring之前，Linux平台存在原生的异步I/O接口：AIO，但AIO的使用存在诸多限制：
@@ -620,7 +622,8 @@ io\underline{~}uring\underline{~}enter用于：
 
 \subsection{有栈协程与无栈协程}
 许多现代编程语言均支持了协程，其中包括Rust，C++，Go，JavaScript。
-协程可以分为\textbf{有栈协程}和\textbf{无栈协程}，其中Rust，C++ 20，JavaScript中支持的是无栈协程，
+协程可以分为\textbf{有栈协程}和\textbf{无栈协程}\cite{weber2022closer}，
+其中Rust，C++ 20，JavaScript中支持的是无栈协程，
 而Go，C++第三方库libco中支持的是有栈协程。\par
 
 有栈协程和无栈协程可以通过判断其是否存在\textbf{调用栈}来进行区分。\par
@@ -997,8 +1000,8 @@ Linux平台上的诸多I/O操作大体可以分为两类：文件和网络。
 本章将在对Rust/C++语言中的协程进行详细分析的基础上，
 介绍Emma和Kuro中各个功能模块的具体实现方法。\par
 
-\subsection{分析Rust语言中的协程}
-早期的Rust语言曾支持一个被称为\textbf{绿色线程}的有栈协程实现，但在0.7版本之后便废弃了。
+\subsection{基于Rust协程的实现}
+早期的Rust语言曾支持一个被称为\textbf{绿色线程}\cite{rosendahl2017green}的有栈协程实现，但在0.7版本之后便废弃了。
 原因是如果Rust要支持绿色线程这样的机制，语言本身需要在运行时层面引入非常多的依赖，
 而这种依赖对于不使用绿色线程的代码来说单纯是一种负担。Rust的目标是构建一门零成本抽象的语言，
 不允许语言运行时层面存在不必要的开销，因此绿色线程最终被删除。\par
@@ -1108,7 +1111,7 @@ Reactor中，这样Reacotr才能够在事件来临时唤醒相应的Future。\pa
 
 \cfig{rust-async}{0.9}{Rust异步架构}
 
-\subsection{分析C++语言中的协程}
+\subsection{基于C++协程的实现}
 在C++ 20之前，C++语言本身不支持协程。开发者只能通过第三方库来获得协程支持，比如微信团队开源的有栈协程库libco。\par
 
 C++ 20推出了无栈协程标准，标准里提供了co\underline{~}await等关键字
@@ -1556,12 +1559,10 @@ CPU：Intel(R) Xeon(R) Gold 5117 CPU @ 2.00GHz，56逻辑核，2物理核\par
 这些主流框架包括：
 
 \begin{enumerate}[label={(\arabic*)}]
-  \item Tokio；
-  \item async-std；
-  \item Go。
+  \item Tokio：开源社区中最成熟的Rust异步运行时；
+  \item async-std：定位和Tokio一致，另一个知名的Rust异步运行时；
+  \item Go：Go语言原生协程框架。
 \end{enumerate}
-
-其中Tokio和async-std是基于Rust语言实现的异步编程框架，Go指Go语言原生支持的有栈协程框架。\par
 
 此外，为了验证异步I/O和协程的高性能，增加一组对照组：基于同步I/O和多线程的传统并发编程框架，
 起名为\textbf{Sync}。\par
@@ -1577,15 +1578,7 @@ CPU：Intel(R) Xeon(R) Gold 5117 CPU @ 2.00GHz，56逻辑核，2物理核\par
 
 使用参与性能测试的各框架编写一个文件操作的应用程序，该应用需要完成多个固定大小的文件的读写任务。\par
 
-控制变量包括：
-
-\begin{enumerate}[label={(\arabic*)}]
-  \item 文件数量N；
-  \item 文件大小M；
-  \item CPU核数L。
-\end{enumerate}
-
-测试指标为时间开销T。\par
+控制变量包括操作的文件数量N，每个文件的大小N和CPU核数L。测试指标为时间开销T。\par
 
 \subsubsubsection{测试结果}
 以下实验结果均采用5次重复实验求平均值得出。\par
@@ -1631,17 +1624,9 @@ CPU：Intel(R) Xeon(R) Gold 5117 CPU @ 2.00GHz，56逻辑核，2物理核\par
 服务器在读取请求的字节流后，需要将该字节流携带在HTTP报文里返回给客户端。
 客户端收到HTTP响应后，一次HTTP请求任务完成。\par
 
-控制变量包括：
+控制变量包括HTTP请求数N，客户端并发数C和CPU核数L。测试指标为服务器吞吐量（请求数/秒）。\par
 
-\begin{enumerate}[label={(\arabic*)}]
-  \item HTTP请求数N；
-  \item 客户端并发C；
-  \item CPU核数L。
-\end{enumerate}
-
-测试指标为服务器吞吐量（请求数/秒）；
-
-使用Apache Benchmark（简称ab）工具来模拟多客户端的并发请求。
+使用Apache Benchmark\cite{brunelle2013evaluating}（简称ab）工具来模拟多客户端的并发请求。
 ab是Apache旗下的一个用于测试Web服务器性能的压力测试工具，
 它基于多线程来模拟多个客户端同时对某一IP地址进行访问，对发压端（客户端）机器的配置要求较低，
 却能给目标服务器带来巨大的负载。\par
@@ -1671,6 +1656,7 @@ ab是Apache旗下的一个用于测试Web服务器性能的压力测试工具，
     而Emma和Kuro的恒定值是最高的，因此可以验证在系统满负载的时候Emma和Kuro具备更高的稳定吞吐量；
   \item 对比C=20和C=200的测试结果，发现在并发数较大时，Emma和Kuro的性能优势更加明显，
     这同时验证了Emma和Kuro相比其他异步编程框架在高并发的场景具有更优秀的表现；
+  \item Kuro框架相比同步I/O和多线程框架（Sync框架）最高可以达到78.24\%的性能提升；
   \item 此外发现，和文件部分的性能测试中相反，基于同步I/O和多线程实现的服务端程序在网络部分的性能测试中
     表现较差，排在倒数第二，仅高于Go框架。
     对这个现象进行了以下分析：
@@ -1688,6 +1674,7 @@ ab是Apache旗下的一个用于测试Web服务器性能的压力测试工具，
 \begin{enumerate}[label={(\arabic*)}]
   \item 实现的异步编程框架Emma和Kuro在性能上比三款主流的开源框架Tokio，async-std和Go表现更好；
   \item Emma和Kuro在文件测试上性能不及同步I/O和多线程框架，在网络测试上表现更好，
+    最高可以达到78.24\%的性能提升，
     对此结论的分析是：
     \begin{enumerate}
       \item 文件测试没能将磁盘I/O打满，I/O数据很快返回，这时候同步I/O性能更好；
