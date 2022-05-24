@@ -2,10 +2,10 @@
   \draw [->] (0,4)--(0,0);
   \draw [->] (0,0)--(14,0);
   \draw [->] (14,0)--(14,4);
-  \draw [dash dot dot] (-2,2)--(16,2);
-  \node at (7,4) {用户};
-  \node at (7,-1) {内核};
-  \node at (-1,2.5) {监听多个请求};
-  \node at (14,1.5) {返回};
-  \node at (7,0.5) {等待某个请求的数据就绪};
+  \draw [dashed] (-2,2)--(16,2);
+  \node at (7,4) {\small 用户};
+  \node at (7,-1) {\small 内核};
+  \node at (-1,2.5) {\small 监听多个请求};
+  \node at (14,1.5) {\small 返回};
+  \node at (7,0.5) {\small 等待某个请求的数据就绪};
 \end{tikzpicture}

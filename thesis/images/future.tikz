@@ -1,8 +1,8 @@
 \begin{tikzpicture}
-\node[box] {Future A}
-  child {node[box] {Future B}}
-  child {node[box] {Future C}
-    child {node[box] {Future D}}
-    child {node[box] {Future E}}
+\node[box] {\small Future A}
+  child {node[box] {\small Future B}}
+  child {node[box] {\small Future C}
+    child {node[box] {\small Future D}}
+    child {node[box] {\small Future E}}
   };
 \end{tikzpicture}

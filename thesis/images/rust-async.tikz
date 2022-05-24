@@ -24,14 +24,14 @@
 \draw [dashed, ->] (3.5,2)..controls (4,2) and (4.5,3) .. (5,3);
 \draw [dashed, ->] (3.5,2)..controls (4,2) and (4.5,1) .. (5,1);
 
-\node at (8,2) {Executor};
-\node at (5.75,1) {Worker};
-\node at (5.75,3) {Worker};
-\node at (4.25,2) {pop};
-\node at (-0.5,1.75) {push}; 
-\node at (2,2.5) {Ready Queue};
-\node at (2,-0.75) {Waiting Queue};
-\node at (-1,-1.25) {Reactor};
-\node at (-2,2) {Spawner};
-\node at (6,-1.25) {register Waker};
+\node at (8,2) {\small Executor};
+\node at (5.75,1) {\small Worker};
+\node at (5.75,3) {\small Worker};
+\node at (4.25,2) {\small pop};
+\node at (-0.5,1.75) {\small push}; 
+\node at (2,2.5) {\small Ready Queue};
+\node at (2,-0.75) {\small Waiting Queue};
+\node at (-1,-1.25) {\small Reactor};
+\node at (-2,2) {\small Spawner};
+\node at (6,-1.25) {\small register Waker};
 \end{tikzpicture}

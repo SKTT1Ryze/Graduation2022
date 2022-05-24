@@ -2,7 +2,7 @@
   \draw [->] (0,4)--(0,0);
   \draw [->] (0,0)--(8,0);
   \draw [->] (8,0)--(8,4);
-  \draw [dash dot dot] (-2,2)--(10,2);
+  \draw [dashed] (-2,2)--(10,2);
   \node at (4,4) {\small 用户};
   \node at (4,-1) {\small 内核};
   \node at (-1,2.5) {\small 发起请求};

@@ -19,12 +19,12 @@
 \draw [->] (2.75,2)--(2.75,2.25);
 
 
-\node at (3,1) {异步编程框架};
-\node at (1,0.5) {基础层};
-\node at (1,1.5) {应用层};
-\node at (0.5,2.5) {App};
-\node at (1.25,2.5) {App};
-\node at (2,2.5) {App};
-\node at (2.75,2.5) {App};
+\node at (3,1) {\small 异步编程框架};
+\node at (1,0.5) {\small 基础层};
+\node at (1,1.5) {\small 应用层};
+\node at (0.5,2.5) {\small App};
+\node at (1.25,2.5) {\small App};
+\node at (2,2.5) {\small App};
+\node at (2.75,2.5) {\small App};
 
 \end{tikzpicture}
