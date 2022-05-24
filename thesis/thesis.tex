@@ -120,7 +120,7 @@
 \begin{cnabstract}{异步I/O；协程；异步编程框架}
 
 在大数据时代，随着互联网用户体量的高速增长，数据中心面对数量越来越庞大，频度越来越高
-的数据访问，对更为高效的数据输入输出（下文简称I/O）技术方案的需求也日益增长。
+的数据访问，对更为高效的数据输入输出（Input/Output，下文简称I/O）技术方案的需求也日益增长。
 在此背景下，传统服务端开发中使用的同步数据I/O模式由于线程阻塞问题逐渐在性能测试上达到瓶颈，
 因此工业界和学术界正在探索和研究更为高效的异步I/O方案，希望以此来提高系统的整体性能。
 同时，在系统并发编程领域，传统的多线程编程模式也慢慢展现出了它的弊端。近年来存储设备的性能
@@ -210,7 +210,8 @@ Linux 平台上的I/O模型经历了几个发展阶段：阻塞，非阻塞\cite
 
 \subsubsubsection{线程与协程}
 
-在传统Linux并发编程领域中，通常使用多线程作为并发模型的基础。操作系统内核为每个线程分配独立的栈空间，
+在传统Linux并发编程领域中，通常使用多线程\cite{nemirovsky2013multithreading}作为并发模型的基础。
+操作系统内核为每个线程分配独立的栈空间，
 使得每个线程可以独立地并行执行，能成倍提高程序运行的效率。同时，每个线程可以占据独立的CPU核，
 充分利用现代CPU的多核架构\cite{hong2011efficient}。想象一下，一个用户程序运行在一个拥有4核的CPU芯片上，创建4个线程，
 每个核执行单个线程任务，则程序的运行效率将是单线程的4倍。\par
@@ -303,7 +304,7 @@ Linux 平台上的I/O模型经历了几个发展阶段：阻塞，非阻塞\cite
 
 \subsubsection{Tokio：Rust异步运行时}
 在Rust语言开发领域内，上述的异步编程框架被称为异步运行时（Async Runtime）。
-Tokio是目前Rust社区里最成熟，也是为数不多广泛应用于工业界研发的Rust异步运行时。
+\textbf{Tokio}是目前Rust社区里最成熟，也是为数不多广泛应用于工业界研发的Rust异步运行时。
 Tokio 现已推出1.0版本，它提供了基于多线程池的协程调度器和基于epoll\cite{gammo2004comparing}的异步网络编程接口。\par
 
 Tokio的优点是具有轻量，安全可靠的特点，它可以减少应用程序的崩溃和增加线上系统的稳定性；
@@ -313,7 +314,7 @@ Tokio的优点是具有轻量，安全可靠的特点，它可以减少应用程
 \subsubsection{Libco：C++协程库}
 在C++语言开发领域内，上述的异步编程框架被称为\textbf{协程库}。
 在C++20之前，C++语言本身不支持协程，开发者们通常通过第三方协程库来获得协程的底层支持。
-其中，微信团队开源的\textbf{libco}\cite{libco.org}项目就是知名度较高的一个。libco是微信后台大规模使用的
+其中，微信团队开源的\textbf{libco}项目就是知名度较高的一个。libco是微信后台大规模使用的
 C/C++协程库，自从2013年部署开始到如今仍稳定运行在微信后台的大规模服务器集群上。\par
 
 微信\cite{montag2018multipurpose}作为支撑上亿用户的国民级软件，它所使用的协程库libco无疑在性能，稳定性上拥有非常优秀
@@ -328,13 +329,13 @@ Goroutine具有着易于编程的特点，只需要一行代码即可以生成�
 并且开发者不需要关心其中的底层细节。\par
 
 Goroutine最大的优点是用法灵活且方便。可以说Go语言逐渐成为国内大厂后端开发的首选语言，
-Goroutine功不可没。然而，Goroutine由于语言本身的垃圾回收机制\cite{sibiryov2017golang}，在性能上相比Rust/C++等
+Goroutine功不可没。然而，Goroutine由于语言本身的垃圾回收机制\cite{sareen2021much}，在性能上相比Rust/C++等
 零成本开销语言稍逊一筹\cite{keskiniemi2022measuring}。同时，Go语言向开发者隐藏了底层协程调度等细节，也就意味着它剥夺了开发者
 根据业务场景进行针对性优化的能力，可扩展性不足。\par
 
 \subsubsection{Node.js：跨平台的JavaScript运行时环境}
 \textbf{Node.js}\cite{tilkov2010node}是一个开源的，跨平台的\textbf{JavaScript}\cite{crockford2008javascript}（简称JS）运行时环境，它使得开发者可以在浏览器之外
-的环境，比如Linux，运行V8引擎。Node.js向JS使用者提供了一系列异步的I/O原语，
+的环境，比如Linux，运行V8引擎\cite{kumar2021design}。Node.js向JS使用者提供了一系列异步的I/O原语，
 使得JS代码不会在执行I/O操作受到阻塞。\par
 
 Node.js性能很好，基于Node.js搭建的服务器程序能支持同时与数千个服务端进行并发连接。
@@ -621,7 +622,7 @@ io\underline{~}uring\underline{~}enter用于：
 \subsubsection{liburing库}
 从上面的分析可以感受到，即使io\underline{~}uring已经在API易用度上下了很大功夫，较之AIO接口简单易用许多，
 但在实际使用过程中依然存在许多底层和细节的问题需要考虑，比如共享内存的映射。因此，io\underline{~}uring
-的主要开发者Jens Axboe同时编写了一个用户态的库，名为\textbf{liburing}\cite{liburing.org}，
+的主要开发者Jens Axboe同时编写了一个用户态的库，名为\textbf{liburing}，
 对io\underline{~}uring相关的一些底层细节
 进行了封装，向用户程序开发者提供了更加简洁易用的API。\par
 
@@ -1190,7 +1191,7 @@ co\underline{~}return 后面跟的表达式的值会作为参数传递给Promise
 然而，在Rust中没有面向对象编程的概念，因此这里通过\textbf{泛型}\cite{milanesi2022defining}来模拟面向对象的思想。\par
 
 Rust中的泛型类似于C++中的模版（template）。泛型可以理解为类型的通配符，
-通过泛型可以实现编译期的\textbf{多态}\cite{ford1945polymorphism}。比如，结构体A<T>表示结构体A具有泛型参数T，
+通过泛型可以实现编译期的\textbf{多态}\cite{mills2021visual}。比如，结构体A<T>表示结构体A具有泛型参数T，
 T可以是任何类型，结构体A实例化的时候需要指定T的类型。
 此外，可以为泛型添加约束，假设B是一个接口，则A<T: B>中的T类型必须实现了B接口，
 否则编译器会报错。\par
@@ -1242,7 +1243,7 @@ Op类实现了Awaitable接口后，就变成了C++异步编程中的一个将来
 
 \subsubsection{Rust中的实现}
 
-在Rust中，用到一个第三方库\textbf{io-uring}\cite{io-uring.org}来实现IoUring模块。\par
+在Rust中，用到一个第三方库\textbf{io-uring}来实现IoUring模块。\par
 
 io-uring是一个对io\underline{~}uring相关底层接口进行封装的Rust第三方库，
 它提供一个IoUring结构体，同时为这个结构体实现了一系列方法用于对io\underline{~}uring实例进行操作。\par
@@ -1260,7 +1261,7 @@ io-uring是一个对io\underline{~}uring相关底层接口进行封装的Rust第
 
 \subsubsection{C++中的实现}
 
-在第二章提到，io\underline{~}uring的作者编写了一个用户态库liburing\cite{liburing.org}，
+在第二章提到，io\underline{~}uring的作者编写了一个用户态库liburing，
 它是一个和Rust中io-uring库同等性质的C语言第三方库，封装了io\underline{~}uring相关的底层接口。\par
 
 在C++中，使用liburing库实现IoUring模块：
