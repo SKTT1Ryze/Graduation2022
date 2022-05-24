@@ -1,7 +1,9 @@
-*/.pdf
-*/.toc
-*/.log
-*/.aux
-*/.lof
-*/.bbl
-*/.blg
+/*/*.pdf
+/*/*.toc
+/*/*.log
+/*/*.aux
+/*/*.lof
+/*/*.bbl
+/*/*.blg
+
+/*/node_modules
