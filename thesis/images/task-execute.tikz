@@ -2,20 +2,20 @@
 
 \node[box] (0) at (0,0) {\small Task};
 
-\node[box] (1) at (2,0) {\small 执行};
+\node[draw] (1) at (2,0) {\small 执行};
 
-\node[box] (2) at (4,0) {\small 切换点};
+\node[draw] (2) at (4,0) {\small 切换点};
 
-\node (3) at (6,0) {\small 检查状态};
+\node[draw, diamond, aspect=2] (3) at (6,0) {\small 检查状态};
 
-\node at (7,0.25) {\small 等待};
+\node at (7,0.5) {\small 等待};
 \node at (7,-1) {\small 就绪};
 
-\node[box] (4) at (8,2) {\small 挂起};
+\node[draw] (4) at (8,2) {\small 挂起};
 \node at(5,1) {\small 唤醒};
 
 
-\node (5) at (8,-2) {\small 是否最后一个切换点};
+\node[draw, diamond, aspect=4] (5) at (8,-2) {\small 是否最后一个切换点};
 
 \node at (9,-1) {\small 是};
 \node at (5,-1) {\small 否};
