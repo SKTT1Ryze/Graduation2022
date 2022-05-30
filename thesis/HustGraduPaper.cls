@@ -2,8 +2,9 @@
 %	HustGraduPaper.sty
 %	本文件是华中科技大学本科生毕业论文模板
 %	@author skinaze
-% 	@date 2018/03/19
-%	@version v2.1.7
+%	@maintainer maniacata
+% 	@date 2022/05/30
+%	@version v3.0.0
 %
 %	本模板遵循MIT License
 %
@@ -137,9 +138,7 @@
 \RequirePackage{fancyhdr}
 %设置页眉样式
 \newcommand{\headstyle}{
-	\fancyhead[C]{\textcolor[RGB]{192,0,0}{\kaishu \zihao{3} 华 \enspace
-    中 \enspace 科 \enspace 技 \enspace 大 \enspace 学 \enspace 毕 \enspace
-    业 \enspace 设 \enspace 计}}
+	\fancyhead[C]{\textcolor[RGB]{192,0,0}{\kaishu \zihao{3} \ziju{1} \bfseries 华中科技大学毕业设计}}
   \def\headrule{{\if@fancyplain\let\headrulewidth\plainheadrulewidth\fi
 	  \vspace*{2mm}
 	  {\color[RGB]{24,116,205}\hrule\@height 0.5pt\@width\headwidth\vskip1pt}
@@ -325,7 +324,7 @@
 
 %设置标题的样式
 \RequirePackage{caption}
-\DeclareCaptionFont{hust}{\normalsize \heiti}
+\DeclareCaptionFont{hust}{\small \songti}
 \captionsetup{labelsep=quad}
 \captionsetup{font={hust,singlespacing}}
 \captionsetup[figure]{position=bottom,skip={0pt}}
@@ -405,6 +404,7 @@
 
 %公式编号带章节
 \numberwithin{equation}{section}
+\renewcommand{\theequation}{\thesection-\arabic{equation}}
 
 %重新设置公式autoref
 %\newcommand{\equationautorefname}{等式}
@@ -591,8 +591,8 @@
 	\def \cnkeyword {#1}
 	\clearpage 
 	\phantomsection
-	\addcontentsline{toc}{section}{摘要}
-	\begin{center} \heiti \bfseries \zihao{-2} 摘 \hspace{2em} 要 \end{center}
+	\addcontentsline{toc}{section}{\ziju{1} 摘要}
+	\begin{center} \heiti \bfseries \zihao{-2} \ziju{1} 摘要 \end{center}
 	
 }{
 	\vspace{1em}
@@ -602,6 +602,9 @@
 
 %英文摘要环境
 \newenvironment{enabstract}[1]{
+	\hyphenpenalty=10000
+	\exhyphenpenalty=10000
+	\sloppy
 	\def \enkeyword {#1}
 	\clearpage 
 	\phantomsection
@@ -624,27 +627,20 @@
 	pdfborder = 000,%去掉链接红框
 	pdfstartview=FitH%打开页面以窗口宽度显示
 } 
-\renewcommand{\cfttoctitlefont}{\hfill \heiti \zihao{-2} \bfseries}
-\renewcommand{\contentsname}{目\hspace{2em}录}
+\renewcommand{\cfttoctitlefont}{\hfill \heiti \zihao{-2}}
+\renewcommand{\contentsname}{\ziju{1} 目录}
 \renewcommand{\cftaftertoctitle}{\hfill}
 \renewcommand{\cftbeforeloftitleskip}{0.5em}
 \renewcommand{\cftafterloftitleskip}{0.5em}
+\renewcommand{\cftdotsep}{0.5}
 \renewcommand{\cftsecdotsep}{\cftdotsep} %设置Section引导点
 \renewcommand{\cftbeforesecskip}{0em} %设置段间距
 \renewcommand{\cftpartfont}{\songti \bfseries} %设置Part字体
-\renewcommand{\cftsecfont}{\songti \bfseries} %设置Section字体
+\renewcommand{\cftsecfont}{\heiti \bfseries} %设置Section字体
 
 %设置tableofcontents参数解析
 \newcommand{\arg@tableofcontents}[2]{
 	\IfStrEqCase{#1}{
-		{pagenum}{
-			\IfStrEqCase{#2}{
-				{yes}{\def\HGP@plainfooterstyle{\footstyle}}
-				{true}{\def\HGP@plainfooterstyle{\footstyle}}
-				{no}{\def\HGP@plainfooterstyle{}}
-				{false}{\def\HGP@plainfooterstyle{}}
-			}[\ClassWarning{\HGP@name}{There's no such value for #1 (tableofcontents)}]
-		}
 		{toc in toc}{
 			\IfStrEqCase{#2}{
 				{yes}{\def\HGP@addtoctotoc{
@@ -708,7 +704,7 @@
 				}
 			}[\ClassWarning{\HGP@name}{There's no such value for #1 (tableofcontents)}]
 		}
-		{dot sep}{\renewcommand{\cftdotsep}{#2}}
+		% {dot sep}{\renewcommand{\cftdotsep}{#2}}
 		{section dot sep}{\renewcommand{\cftsecdotsep}{#2}}
 		{subsection dot sep}{\renewcommand{\cftsubsecdotsep}{#2}}
 		{subsubsection dot sep}{\renewcommand{\cftsubsubsecdotsep}{#2}}
@@ -720,8 +716,11 @@
 \AtBeginDocument{
 	%设置新的生成目录命令
 	\let \oldtableofcontents \tableofcontents
-	\renewcommand{\tableofcontents}[1][pagenum=false,toc in toc=false]{
-		\def\HGP@plainfooterstyle{}
+	\renewcommand{\tableofcontents}[1][toc in toc=false]{
+		\def\HGP@plainfooterstyle{
+			\footstyle
+			\pagenumbering{Roman}
+		}
 		\def\HGP@addtoctotoc{}
 		\kv@parse{#1}{\arg@tableofcontents}
 		%修改hdr原plain格式
@@ -753,8 +752,8 @@
 \newenvironment{thankpage}{
 	\clearpage
 	\phantomsection
-	\addcontentsline{toc}{section}{致谢}
-	\section*{致谢}
+	\addcontentsline{toc}{section}{\ziju{1} 致谢}
+	\section*{\ziju{1} 致谢}
 }{
 	\clearpage
 }
