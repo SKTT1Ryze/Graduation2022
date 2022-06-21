@@ -16,6 +16,7 @@ Rust/C++语言中的协程规范设计并实现了两款高性能的
 
 ## 毕业论文
 [Latex源码](./thesis)
+[pdf](https://github.com/SKTT1Ryze/Graduation2022/releases/tag/v0.1.0)
 
 ## 毕设答辩演示文稿
 [在线前端PPT](https://sktt1ryze.github.io/ppt.js/)
